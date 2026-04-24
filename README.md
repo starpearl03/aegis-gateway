@@ -1,10 +1,10 @@
-# Sentinel - Police Intelligence System
+# Aegis — Police Intelligence System
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-green.svg)
 ![Flask](https://img.shields.io/badge/flask-2.3.3-lightgrey.svg)
 
-Sentinel is an advanced police intelligence system for crime analysis, facial recognition, and predictive policing. Built with a modular architecture using Flask, SQLAlchemy, and AI/ML technologies, it provides comprehensive tools for crime tracking, suspect identification, and crime hotspot detection.
+Aegis is an advanced police intelligence system for crime analysis, facial recognition, and predictive policing. Built with a modular architecture using Flask, SQLAlchemy, and AI/ML technologies, it provides comprehensive tools for crime tracking, suspect identification, and crime hotspot detection.
 
 ---
 
@@ -47,7 +47,7 @@ Sentinel is an advanced police intelligence system for crime analysis, facial re
 
 ## Architecture Overview
 
-Sentinel follows a **Clean Architecture** pattern with clear separation of concerns across multiple layers:
+Aegis follows a **Clean Architecture** pattern with clear separation of concerns across multiple layers:
 
 <p align="left">
   <img src="docs/imgs/Architecture-Overview.png" alt="Architecture Overview" width="800"/>
@@ -75,7 +75,7 @@ module/
 ## Project Structure
 
 ```
-Sentinel/
+Aegis/
 ├── main.py                      # Application entry point
 ├── requirements.txt             # Python dependencies
 ├── .env.development            # Development configuration
@@ -356,7 +356,7 @@ print(f"By crime type: {stats['by_crime_type']}")
 
 ### Base Model & Repository Pattern
 
-Sentinel implements a **Generic Repository Pattern** with a base model providing common functionality for all entities.
+Aegis implements a **Generic Repository Pattern** with a base model providing common functionality for all entities.
 
 #### Class Diagram
 
@@ -585,7 +585,7 @@ The application will be available at `http://127.0.0.1:5000`
 
 ```yaml
 application:
-  name: Sentinel Police Intelligence System
+  name: Aegis Police Intelligence System
   version: 1.0.0
 
 security:
@@ -771,3 +771,6 @@ For questions or support, please contact:
 ---
 
 **Built with Python, Flask, AI, and a commitment to public safety.**
+## Author
+
+Felistas V. Charuka · [github.com/starpearl03](https://github.com/starpearl03)
