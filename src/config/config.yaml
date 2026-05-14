@@ -1,0 +1,75 @@
+# Sentinel Configuration
+
+# Application metadata
+application:
+  name: "Sentinel"
+  description: "Police intelligence system for crime analysis, image and video search"
+  version: ${APP_VERSION}
+
+# Security & Secrets
+security:
+  # Session Configuration
+  session:
+    secret_key: ${SESSION_SECRET_KEY}
+    type: "sqlalchemy"
+    permanent_session_lifetime: ${SESSION_LIFETIME}
+    refresh_each_request: true
+
+    # Cookie settings
+    cookie_secure: ${COOKIE_SECURE}
+    cookie_httponly: ${COOKIE_HTTPONLY}
+    cookie_samesite: ${COOKIE_SAMESITE}
+    cookie_name: ${SESSION_COOKIE_NAME}
+    table_name: "sessions"
+
+  # Password hashing
+  password:
+    bcrypt_rounds: ${BCRYPT_ROUNDS}
+
+# Server configuration
+server:
+  ip: ${SERVER_IP}
+  port: ${SERVER_PORT}
+  debug: ${FLASK_DEBUG}
+
+# Database configuration
+database:
+  uri: ${DATABASE_URI}
+  track_modifications: false
+  pool_size: ${DB_POOL_SIZE}
+  max_overflow: ${DB_MAX_OVERFLOW}
+  pool_timeout: 30
+  pool_recycle: 1800
+  echo: ${DB_ECHO}
+  pool_pre_ping: true
+
+# External API keys
+integrations:
+  ai:
+    gemini:
+      api_key: ${GEMINI_API_KEY}
+      model: "gemini-flash"
+      enabled: true
+
+  email:
+    provider: "gmail"
+    from_name: ${SMTP_FROM_NAME}
+    from_email: ${SMTP_FROM_EMAIL}
+    smtp:
+      host: "smtp.gmail.com"
+      port: 587
+      username: ${SMTP_USERNAME}
+      password: ${SMTP_PASSWORD}
+      use_tls: true
+
+  twilio:
+    account_sid: ${ACCOUNT_SID}
+    auth_token: ${AUTH_TOKEN}
+    phone_number: ${PHONE_NUMBER}
+    messaging_service_sid: ${MESSAGING_SERVICE_SID}
+
+# Logging configuration
+logging:
+  level: ${LOG_LEVEL}
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: ${LOG_FILE_PATH}
