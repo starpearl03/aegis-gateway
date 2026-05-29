@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Sentinel | Zimbabwe Police Department</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gold: #b8860b;
+            --primary-gold-light: #d4af37;
+            --primary-gold-dark: #8b6914;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Smooth animated gradient background */
+        .bg-animated {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Glassmorphism effect overlay */
+        .glass-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Toast Container */
+        #toastContainer {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1055;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Toast Styles - Compact Design */
+        .toast {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 8px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.5);
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            min-width: 360px;
+            max-width: 400px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .toast:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 24px 70px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.6);
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 100%;
+            transform-origin: left;
+            transition: transform linear;
+        }
+
+        .toast-progress.success {
+            background: linear-gradient(90deg, var(--success), #34d399);
+        }
+
+        .toast-progress.error {
+            background: linear-gradient(90deg, var(--error), #f87171);
+        }
+
+        .toast-progress.warning {
+            background: linear-gradient(90deg, var(--warning), #fbbf24);
+        }
+
+        .toast-progress.info {
+            background: linear-gradient(90deg, var(--primary-gold), var(--primary-gold-light));
+        }
+
+        .toast:hover .toast-progress {
+            animation-play-state: paused;
+        }
+
+        /* Compact Header */
+        .toast-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .toast-icon.success {
+            background: linear-gradient(135deg, var(--success), #34d399);
+            color: white;
+        }
+
+        .toast-icon.error {
+            background: linear-gradient(135deg, var(--error), #f87171);
+            color: white;
+        }
+
+        .toast-icon.warning {
+            background: linear-gradient(135deg, var(--warning), #fbbf24);
+            color: white;
+        }
+
+        .toast-icon.info {
+            background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
+            color: white;
+        }
+
+        .toast-header strong {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 13px;
+            flex: 1;
+            letter-spacing: -0.1px;
+        }
+
+        .toast-header .btn-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .toast-header .btn-close:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        /* Bigger Body */
+        .toast-body {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 14px 16px 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        .toast.hide {
+            animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        @keyframes toastSlideOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%) scale(0.9);
+            }
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.98);
+            width: 440px;
+            padding: 48px;
+            border-radius: 24px;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.3);
+            animation: slideUp 0.6s ease-out;
+            backdrop-filter: blur(20px);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-light) 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:
+                0 8px 24px rgba(184, 134, 11, 0.4),
+                0 2px 8px rgba(184, 134, 11, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: translateY(-4px) scale(1.05);
+        }
+
+        .logo i {
+            color: white;
+            font-size: 36px;
+        }
+
+        .system-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .system-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: all 0.2s ease;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: var(--primary-gold);
+            box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.1);
+        }
+
+        input::placeholder {
+            color: #94a3b8;
+        }
+
+        .remember-container {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+        }
+
+        .checkbox-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .checkbox-custom::after {
+            content: '';
+            width: 5px;
+            height: 9px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) scale(0);
+            transition: transform 0.2s ease;
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom {
+            background: var(--primary-gold);
+            border-color: var(--primary-gold);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom::after {
+            transform: rotate(45deg) scale(1);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:focus + .checkbox-custom {
+            box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.1);
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(184, 134, 11, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                width: 90%;
+                padding: 32px 24px;
+            }
+
+            .system-title {
+                font-size: 26px;
+            }
+
+            #toastContainer {
+                top: 16px;
+                right: 16px;
+                left: 16px;
+            }
+
+            .toast {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Smooth animated background -->
+    <div class="bg-animated"></div>
+
+    <!-- Glass overlay -->
+    <div class="glass-overlay"></div>
+
+    <div class="login-container">
+        <div class="logo-container">
+            <div class="logo">
+                <i data-feather="camera"></i>
+            </div>
+            <h1 class="system-title">Sentinel</h1>
+            <p class="system-subtitle">Zimbabwe Police Department</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" placeholder="Enter your email" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" placeholder="Enter your password" required>
+            </div>
+
+            <div class="remember-container">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" name="remember" id="remember">
+                    <span class="checkbox-custom"></span>
+                    <label for="remember" class="checkbox-label">Remember me</label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Sign In</button>
+        </form>
+
+        <div class="footer">
+            &copy; 2025 Zimbabwe Police Department &middot; Sentinel
+        </div>
+    </div>
+
+    <script>
+        // Toast System
+        class ToastManager {
+            constructor() {
+                this.container = this.createContainer();
+                this.toasts = new Map();
+                this.counter = 0;
+            }
+
+            createContainer() {
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    document.body.appendChild(container);
+                }
+                return container;
+            }
+
+            show(type, title, message, duration = 5000) {
+                const toastId = `toast_${++this.counter}`;
+
+                const toast = document.createElement('div');
+                toast.className = 'toast show';
+                toast.setAttribute('role', 'alert');
+                toast.id = toastId;
+
+                const iconMap = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    danger: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+
+                const normalizedType = type === 'danger' ? 'error' : type;
+
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <div class="toast-icon ${normalizedType}">
+                            <i class="${iconMap[type] || iconMap.info}"></i>
+                        </div>
+                        <strong>${this.escapeHtml(title)}</strong>
+                        <button type="button" class="btn-close" data-toast-id="${toastId}">×</button>
+                    </div>
+                    <div class="toast-body">
+                        ${this.escapeHtml(message)}
+                    </div>
+                    ${duration > 0 ? `<div class="toast-progress ${normalizedType}"></div>` : ''}
+                `;
+
+                this.container.appendChild(toast);
+
+                const closeBtn = toast.querySelector('.btn-close');
+                closeBtn.addEventListener('click', () => this.hide(toastId));
+
+                const state = {
+                    duration: duration,
+                    remaining: duration,
+                    startTime: null,
+                    timeoutId: null,
+                    isHovered: false,
+                    progressBar: toast.querySelector('.toast-progress')
+                };
+
+                this.startTimer(toastId, state);
+
+                toast.addEventListener('mouseenter', () => {
+                    state.isHovered = true;
+                    this.pauseTimer(state);
+                });
+
+                toast.addEventListener('mouseleave', () => {
+                    state.isHovered = false;
+                    this.resumeTimer(toastId, state);
+                });
+
+                this.toasts.set(toastId, { element: toast, state: state });
+                return toastId;
+            }
+
+            startTimer(toastId, state) {
+                state.startTime = performance.now();
+
+                if (state.progressBar) {
+                    state.progressBar.style.transition = 'none';
+                    state.progressBar.style.transform = 'scaleX(1)';
+                    state.progressBar.offsetHeight;
+
+                    requestAnimationFrame(() => {
+                        state.progressBar.style.transition = `transform ${state.remaining}ms linear`;
+                        state.progressBar.style.transform = 'scaleX(0)';
+                    });
+                }
+
+                state.timeoutId = setTimeout(() => {
+                    if (!state.isHovered) {
+                        this.hide(toastId);
+                    }
+                }, state.remaining);
+            }
+
+            pauseTimer(state) {
+                if (state.timeoutId) {
+                    clearTimeout(state.timeoutId);
+                    state.timeoutId = null;
+                }
+
+                const elapsed = performance.now() - state.startTime;
+                state.remaining = Math.max(0, state.remaining - elapsed);
+
+                if (state.progressBar) {
+                    const currentScale = 1 - (elapsed / state.duration);
+                    state.progressBar.style.transition = 'none';
+                    state.progressBar.style.transform = `scaleX(${Math.max(0, currentScale)})`;
+                }
+            }
+
+            resumeTimer(toastId, state) {
+                if (state.remaining > 0) {
+                    this.startTimer(toastId, state);
+                }
+            }
+
+            hide(toastId) {
+                const data = this.toasts.get(toastId);
+                if (!data) return;
+
+                const { element, state } = data;
+
+                if (state.timeoutId) {
+                    clearTimeout(state.timeoutId);
+                }
+
+                element.classList.remove('show');
+                element.classList.add('hide');
+
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                    this.toasts.delete(toastId);
+                }, 300);
+            }
+
+            success(title, message, duration = 5000) {
+                return this.show('success', title, message, duration);
+            }
+
+            error(title, message, duration = 7000) {
+                return this.show('error', title, message, duration);
+            }
+
+            warning(title, message, duration = 6000) {
+                return this.show('warning', title, message, duration);
+            }
+
+            info(title, message, duration = 5000) {
+                return this.show('info', title, message, duration);
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        const toast = new ToastManager();
+        window.toast = toast;
+
+        // Initialize Feather icons
+        if (window.feather) {
+            feather.replace();
+        }
+
+        // Flask flash messages
+        document.addEventListener('DOMContentLoaded', () => {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    const messages = [
+                        {% for category, message in messages %}
+                        {
+                            type: '{{ category|lower }}',
+                            title: '{{ category|title }}',
+                            message: {{ message|tojson }}
+                        }{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+
+                    messages.forEach((msg, index) => {
+                        setTimeout(() => {
+                            const type = ['success', 'error', 'danger', 'warning', 'info'].includes(msg.type) ? msg.type : 'info';
+                            toast.show(type, msg.title, msg.message);
+                        }, index * 150);
+                    });
+                {% endif %}
+            {% endwith %}
+        });
+    </script>
+</body>
+</html>
