@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Face X System | Zimbabwe Police Department{% endblock %}</title>
+    <!-- Google Fonts - Use Inter or similar font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Include Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- Include Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Include CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+    <style>
+     /* Root Variables with Zimbabwe Police color scheme */
+:root {
+    --primary-color: #003087; /* Navy blue for Zimbabwe police */
+    --primary-light: rgba(0, 48, 135, 0.1);
+    --primary-dark: #002366;
+    --secondary-color: #f9f9f9;
+    --accent-color: #b8860b; /* Dark goldenrod as accent */
+    --accent-light: rgba(184, 134, 11, 0.15);
+    --dark-color: #1a1a1a;
+    --text-color: #333333;
+    --light-gray: #f5f5f5;
+    --mid-gray: #eaeaea;
+    --border-color: #ebebeb;
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 80px;
+    --sidebar-bg: #ffffff;
+    --sidebar-hover: #f8f8f8;
+    --sidebar-active: rgba(0, 48, 135, 0.15);
+    --sidebar-text: #4a4a4a;
+    --sidebar-active-text: #000000;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.03);
+    --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --header-height: 0px; /* This will be set by JavaScript */
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+}
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Toast Container */
+#toastContainer {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1055;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Toast Styles - Compact Design */
+.toast {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 8px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.5);
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    min-width: 360px;
+    max-width: 400px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    transform-origin: left;
+    transition: transform linear;
+}
+
+.toast-progress.success {
+    background: linear-gradient(90deg, var(--success), #34d399);
+}
+
+.toast-progress.error {
+    background: linear-gradient(90deg, var(--error), #f87171);
+}
+
+.toast-progress.warning {
+    background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
+.toast-progress.info {
+    background: linear-gradient(90deg, var(--accent-color), var(--accent-light));
+}
+
+.toast:hover .toast-progress {
+    animation-play-state: paused;
+}
+
+/* Compact Header */
+.toast-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.toast-icon.success {
+    background: linear-gradient(135deg, var(--success), #34d399);
+    color: white;
+}
+
+.toast-icon.error {
+    background: linear-gradient(135deg, var(--error), #f87171);
+    color: white;
+}
+
+.toast-icon.warning {
+    background: linear-gradient(135deg, var(--warning), #fbbf24);
+    color: white;
+}
+
+.toast-icon.info {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+    color: white;
+}
+
+.toast-header strong {
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 13px;
+    flex: 1;
+    letter-spacing: -0.1px;
+}
+
+.toast-header .btn-close {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 2px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.toast-header .btn-close:hover {
+    background: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Bigger Body */
+.toast-body {
+    background: transparent;
+    color: #64748b;
+    padding: 14px 16px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+.toast.show {
+    animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.toast.hide {
+    animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes toastSlideOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+    }
+}
+
+/* Main Sidebar Styling */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    height: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-md);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: var(--transition);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 10px;
+}
+
+.sidebar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+}
+
+/* Logo Section with Animation */
+.logo-section {
+    display: flex;
+    align-items: center;
+    padding: 24px 25px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 5px;
+    background-color: #fdfdfd;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: var(--transition);
+}
+
+.logo-grid {
+    margin-right: 15px;
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.logo-grid::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(184, 134, 11, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.logo-section:hover .logo-grid::before {
+    opacity: 1;
+}
+
+.logo-grid i {
+    width: 22px;
+    height: 22px;
+    stroke-width: 2.5px;
+    transition: var(--transition-fast);
+}
+
+.logo-section:hover .logo-grid i {
+    transform: rotate(90deg) scale(1.1);
+}
+
+.logo-section h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+    color: var(--dark-color);
+    transition: var(--transition);
+}
+
+.logo-version {
+    font-size: 13px;
+    color: #888;
+    margin-left: 5px;
+    font-weight: 400;
+    position: relative;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: var(--light-gray);
+    transition: var(--transition);
+}
+
+.logo-section:hover .logo-version {
+    background-color: var(--primary-light);
+    color: var(--dark-color);
+}
+
+/* Navigation Menu */
+.nav-menu {
+    list-style: none;
+    padding: 15px 15px 100px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Section Headers */
+.nav-section {
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.nav-section-title {
+    padding: 0 10px 8px;
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+/* Nav Item and Links */
+.nav-item {
+    margin-bottom: 5px;
+    list-style: none;
+    position: relative;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    transition: var(--transition-fast);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover Effect with Before Pseudo-element */
+.nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 0;
+    background-color: var(--primary-light);
+    z-index: -1;
+    transition: var(--transition-fast);
+    opacity: 0;
+}
+
+.nav-link:hover::before,
+.nav-link.active::before {
+    width: 100%;
+    opacity: 1;
+}
+
+/* Icon Container for Animation */
+.icon-container {
+    margin-right: 14px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav-link i {
+    width: 20px;
+    height: 20px;
+    color: #7a7a7a;
+    stroke-width: 1.5px;
+    transition: var(--transition);
+}
+
+/* Nav Text - Added this class for better control */
+.nav-text {
+    transition: var(--transition);
+}
+
+/* Active State */
+.nav-link.active {
+    color: var(--dark-color);
+    font-weight: 600;
+}
+
+.nav-link.active .icon-container {
+    background-color: var(--primary-color);
+    box-shadow: 0 4px 8px rgba(0, 48, 135, 0.3);
+}
+
+.nav-link.active i {
+    color: var(--accent-color) !important;
+    stroke: var(--accent-color) !important;
+    stroke-width: 2px;
+}
+
+/* More specific rule to ensure it overrides any other styles */
+.nav-link.active .icon-container i {
+    color: var(--accent-color) !important;
+    stroke: var(--accent-color) !important;
+}
+
+/* For Feather SVG icons */
+.nav-link.active .icon-container svg {
+    color: var(--accent-color) !important;
+    stroke: var(--accent-color) !important;
+}
+
+/* Hover Effects */
+.nav-link:hover:not(.active) {
+    color: var(--dark-color);
+    transform: translateX(3px);
+}
+
+.nav-link:hover .icon-container:not(.active .icon-container) {
+    background-color: var(--light-gray);
+}
+
+.nav-link:hover i:not(.active i) {
+    color: var(--dark-color);
+}
+
+/* Badge Notifications */
+.notification-badge {
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 12px;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.notification-badge::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+    top: -100%;
+    left: -100%;
+    transition: var(--transition);
+}
+
+.nav-link:hover .notification-badge::after {
+    top: 0;
+    left: 0;
+}
+
+/* User Profile */
+.user-profile {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    position: fixed;
+    bottom: 0;
+    width: var(--sidebar-width);
+    box-sizing: border-box;
+    border-top: 1px solid var(--border-color);
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+    transition: var(--transition);
+    z-index: 5;
+}
+
+.profile-avatar {
+    position: relative;
+    margin-right: 14px;
+}
+
+.profile-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    object-fit: cover;
+    transition: var(--transition);
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.user-profile:hover .profile-avatar img {
+    transform: scale(1.05);
+    border: 2px solid var(--primary-color);
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #4caf50;
+    border: 2px solid white;
+    transition: var(--transition);
+}
+
+.user-profile:hover .status-indicator {
+    transform: scale(1.2);
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-size: 12px;
+    color: #888;
+    margin: 0;
+    margin-bottom: 2px;
+    transition: var(--transition);
+}
+
+.user-status {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+    transition: var(--transition);
+}
+
+.user-profile:hover .user-name {
+    color: #666;
+}
+
+.user-profile:hover .user-status {
+    color: var(--dark-color);
+}
+
+.logout-btn {
+    color: #888;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: var(--light-gray);
+}
+
+.logout-btn i {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5px;
+    transition: var(--transition);
+}
+
+.logout-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 48, 135, 0.3);
+    transform: translateY(-2px);
+}
+
+.logout-btn:hover i {
+    transform: rotate(180deg);
+}
+
+/* Mobile Toggle Button */
+.sidebar-toggle {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 99;
+    background-color: var(--primary-color);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transform: scale(0);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.sidebar-toggle i {
+    color: white;
+    width: 24px;
+    height: 24px;
+    stroke-width: 2px;
+    transition: var(--transition);
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 90;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+}
+
+.sidebar-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Main Content Area Styling */
+.main-container {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+.content-area {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    transition: var(--transition);
+    height: 100%;
+    padding: 0 30px 20px;
+    background-color: var(--secondary-color);
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.content-wrapper {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--header-height);
+    padding-top: 40px;
+}
+
+/* COLLAPSED SIDEBAR STYLES */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-collapsed-width: 80px;
+    }
+
+    .sidebar {
+        width: var(--sidebar-collapsed-width);
+    }
+
+    .content-area {
+        margin-left: var(--sidebar-collapsed-width);
+        width: calc(100% - var(--sidebar-collapsed-width));
+    }
+
+    /* Center the logo */
+    .logo-section {
+        justify-content: center;
+        padding: 24px 0;
+    }
+
+    .logo-grid {
+        margin-right: 0;
+    }
+
+    /* Hide text elements */
+    .logo-section h1,
+    .logo-version,
+    .nav-text,
+    .nav-section-title,
+    .user-info,
+    .notification-badge {
+        opacity: 0;
+        visibility: hidden;
+        width: 0;
+        display: none;
+    }
+
+    /* Center navigation icons */
+    .nav-link {
+        justify-content: center;
+        padding: 12px 0;
+    }
+
+    .icon-container {
+        margin-right: 0;
+    }
+
+    /* Center user profile */
+    .user-profile {
+        justify-content: center;
+        width: var(--sidebar-collapsed-width);
+        padding: 15px 0;
+    }
+
+    .profile-avatar {
+        margin-right: 0;
+    }
+
+    /* Position logout button in collapsed state */
+    .logout-btn {
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    /* HOVER EXPAND FUNCTIONALITY */
+    .sidebar:hover {
+        width: var(--sidebar-width);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .sidebar:hover .logo-section {
+        justify-content: flex-start;
+        padding: 24px 25px;
+    }
+
+    .sidebar:hover .logo-grid {
+        margin-right: 15px;
+    }
+
+    .sidebar:hover .logo-section h1,
+    .sidebar:hover .logo-version,
+    .sidebar:hover .nav-text,
+    .sidebar:hover .nav-section-title,
+    .sidebar:hover .user-info,
+    .sidebar:hover .notification-badge {
+        opacity: 1;
+        visibility: visible;
+        width: auto;
+        display: block;
+        transition-delay: 0.1s;
+    }
+
+    .sidebar:hover .nav-link {
+        justify-content: flex-start;
+        padding: 12px 16px;
+    }
+
+    .sidebar:hover .icon-container {
+        margin-right: 14px;
+    }
+
+    .sidebar:hover .user-profile {
+        justify-content: flex-start;
+        width: var(--sidebar-width);
+        padding: 15px 20px;
+    }
+
+    .sidebar:hover .profile-avatar {
+        margin-right: 14px;
+    }
+
+    .sidebar:hover .logout-btn {
+        position: static;
+        transform: none;
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-width);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .content-area {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .logo-section h1,
+    .logo-version,
+    .nav-text,
+    .nav-section-title,
+    .user-info,
+    .notification-badge {
+        opacity: 1;
+        visibility: visible;
+        width: auto;
+        display: block;
+    }
+
+    .logo-section {
+        justify-content: flex-start;
+        padding: 24px 25px;
+    }
+
+    .logo-grid {
+        margin-right: 15px;
+    }
+
+    .nav-link {
+        justify-content: flex-start;
+        padding: 12px 16px;
+    }
+
+    .icon-container {
+        margin-right: 14px;
+    }
+
+    .user-profile {
+        justify-content: flex-start;
+        width: var(--sidebar-width);
+        padding: 15px 20px;
+    }
+
+    .profile-avatar {
+        margin-right: 14px;
+    }
+
+    .logout-btn {
+        position: static;
+        transform: none;
+    }
+
+    .sidebar-toggle {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    #toastContainer {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+    }
+
+    .toast {
+        min-width: 100%;
+    }
+}
+
+/* Animation for mobile toggle */
+.sidebar.show + .sidebar-toggle i {
+    transform: rotate(180deg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <div class="main-container">
+        {% include 'macros/sidebar.jinja2' %}
+
+        <div class="content-area">
+            <div class="notification-bell">
+                <i data-feather="bell"></i>
+                <span class="notification-dot"></span>
+            </div>
+
+            {% block page_header %}
+            {# The page header will be included using the macro #}
+            {% endblock %}
+
+            <div class="content-wrapper">
+                {% block content %}
+                <!-- Main content goes here -->
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Toast System
+        class ToastManager {
+            constructor() {
+                this.container = this.createContainer();
+                this.toasts = new Map();
+                this.counter = 0;
+            }
+
+            createContainer() {
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    document.body.appendChild(container);
+                }
+                return container;
+            }
+
+            show(type, title, message, duration = 5000) {
+                const toastId = `toast_${++this.counter}`;
+
+                const toast = document.createElement('div');
+                toast.className = 'toast show';
+                toast.setAttribute('role', 'alert');
+                toast.id = toastId;
+
+                const iconMap = {
+                    success: 'fas fa-check-circle',
+                    error: 'fas fa-exclamation-circle',
+                    danger: 'fas fa-exclamation-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    info: 'fas fa-info-circle'
+                };
+
+                const normalizedType = type === 'danger' ? 'error' : type;
+
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <div class="toast-icon ${normalizedType}">
+                            <i class="${iconMap[type] || iconMap.info}"></i>
+                        </div>
+                        <strong>${this.escapeHtml(title)}</strong>
+                        <button type="button" class="btn-close" data-toast-id="${toastId}">×</button>
+                    </div>
+                    <div class="toast-body">
+                        ${this.escapeHtml(message)}
+                    </div>
+                    ${duration > 0 ? `<div class="toast-progress ${normalizedType}"></div>` : ''}
+                `;
+
+                this.container.appendChild(toast);
+
+                const closeBtn = toast.querySelector('.btn-close');
+                closeBtn.addEventListener('click', () => this.hide(toastId));
+
+                const state = {
+                    duration: duration,
+                    remaining: duration,
+                    startTime: null,
+                    timeoutId: null,
+                    isHovered: false,
+                    progressBar: toast.querySelector('.toast-progress')
+                };
+
+                this.startTimer(toastId, state);
+
+                toast.addEventListener('mouseenter', () => {
+                    state.isHovered = true;
+                    this.pauseTimer(state);
+                });
+
+                toast.addEventListener('mouseleave', () => {
+                    state.isHovered = false;
+                    this.resumeTimer(toastId, state);
+                });
+
+                this.toasts.set(toastId, { element: toast, state: state });
+                return toastId;
+            }
+
+            startTimer(toastId, state) {
+                state.startTime = performance.now();
+
+                if (state.progressBar) {
+                    state.progressBar.style.transition = 'none';
+                    state.progressBar.style.transform = 'scaleX(1)';
+                    state.progressBar.offsetHeight;
+
+                    requestAnimationFrame(() => {
+                        state.progressBar.style.transition = `transform ${state.remaining}ms linear`;
+                        state.progressBar.style.transform = 'scaleX(0)';
+                    });
+                }
+
+                state.timeoutId = setTimeout(() => {
+                    if (!state.isHovered) {
+                        this.hide(toastId);
+                    }
+                }, state.remaining);
+            }
+
+            pauseTimer(state) {
+                if (state.timeoutId) {
+                    clearTimeout(state.timeoutId);
+                    state.timeoutId = null;
+                }
+
+                const elapsed = performance.now() - state.startTime;
+                state.remaining = Math.max(0, state.remaining - elapsed);
+
+                if (state.progressBar) {
+                    const currentScale = 1 - (elapsed / state.duration);
+                    state.progressBar.style.transition = 'none';
+                    state.progressBar.style.transform = `scaleX(${Math.max(0, currentScale)})`;
+                }
+            }
+
+            resumeTimer(toastId, state) {
+                if (state.remaining > 0) {
+                    this.startTimer(toastId, state);
+                }
+            }
+
+            hide(toastId) {
+                const data = this.toasts.get(toastId);
+                if (!data) return;
+
+                const { element, state } = data;
+
+                if (state.timeoutId) {
+                    clearTimeout(state.timeoutId);
+                }
+
+                element.classList.remove('show');
+                element.classList.add('hide');
+
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                    this.toasts.delete(toastId);
+                }, 300);
+            }
+
+            success(title, message, duration = 5000) {
+                return this.show('success', title, message, duration);
+            }
+
+            error(title, message, duration = 7000) {
+                return this.show('error', title, message, duration);
+            }
+
+            warning(title, message, duration = 6000) {
+                return this.show('warning', title, message, duration);
+            }
+
+            info(title, message, duration = 5000) {
+                return this.show('info', title, message, duration);
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        const toast = new ToastManager();
+        window.toast = toast;
+
+        // Main sidebar functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Feather icons
+            if (window.feather) {
+                feather.replace();
+            }
+
+            // Flask flash messages as toasts
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    const messages = [
+                        {% for category, message in messages %}
+                        {
+                            type: '{{ category|lower }}',
+                            title: '{{ category|title }}',
+                            message: {{ message|tojson }}
+                        }{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ];
+
+                    messages.forEach((msg, index) => {
+                        setTimeout(() => {
+                            const type = ['success', 'error', 'danger', 'warning', 'info'].includes(msg.type) ? msg.type : 'info';
+                            toast.show(type, msg.title, msg.message);
+                        }, index * 150);
+                    });
+                {% endif %}
+            {% endwith %}
+
+            // Mobile toggle functionality
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (sidebarToggle && sidebar && overlay) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    overlay.classList.toggle('visible');
+                });
+
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('visible');
+                });
+            }
+
+            // Calculate and set header height for content spacing
+            function setHeaderHeight() {
+                const header = document.querySelector('.page-header');
+                if (header) {
+                    const headerHeight = header.offsetHeight;
+                    document.documentElement.style.setProperty('--header-height', headerHeight + 'px');
+
+                    // Add spacing to the content wrapper
+                    const contentWrapper = document.querySelector('.content-wrapper');
+                    if (contentWrapper) {
+                        contentWrapper.style.marginTop = headerHeight + 'px';
+                    }
+                }
+            }
+
+            // Set header height initially
+            setHeaderHeight();
+
+            // Update header height on window resize
+            window.addEventListener('resize', setHeaderHeight);
+
+            // Handle dropdown toggles if they exist
+            const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+
+            if (dropdownToggles.length > 0) {
+                dropdownToggles.forEach(function(toggle) {
+                    // First, check if we need to open any dropdowns based on active state
+                    const dropdown = toggle.nextElementSibling;
+                    if (dropdown) {
+                        const hasActiveChild = dropdown.querySelector('.nav-dropdown-link.active');
+
+                        // If the toggle itself is active or has an active child, open the dropdown
+                        if (toggle.classList.contains('active') || hasActiveChild) {
+                            toggle.classList.add('active');
+                            dropdown.classList.add('show');
+                        }
+
+                        // Add click event listener
+                        toggle.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            // Toggle active class on the dropdown toggle
+                            this.classList.toggle('active');
+
+                            // Toggle show class on the dropdown menu
+                            dropdown.classList.toggle('show');
+
+                            // Re-initialize Feather icons
+                            if (window.feather) {
+                                setTimeout(function() {
+                                    feather.replace();
+                                }, 100);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Add subtle hover animation to nav items
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('mouseenter', function() {
+                    if (!this.classList.contains('active')) {
+                        this.style.transform = 'translateX(5px)';
+                    }
+                });
+
+                link.addEventListener('mouseleave', function() {
+                    if (!this.classList.contains('active')) {
+                        this.style.transform = 'translateX(0)';
+                    }
+                });
+            });
+
+            // Handle window resize for responsive sidebar
+            window.addEventListener('resize', function() {
+                // Adjust the sidebar based on window width
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('visible');
+                }
+            });
+        });
+    </script>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

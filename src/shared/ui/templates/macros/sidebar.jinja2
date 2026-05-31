@@ -1,0 +1,107 @@
+<!-- Improved Sidebar Navigation -->
+<div class="sidebar">
+    <!-- Logo Section with Animation -->
+    <div class="logo-section">
+        <div class="logo-grid">
+            <i data-feather="grid"></i>
+        </div>
+        <h1>Face X <span class="logo-version">v1</span></h1>
+    </div>
+
+    <!-- Main Navigation with Animations -->
+    <ul class="nav-menu">
+        <!-- Dashboard -->
+        <li class="nav-item nav-section">
+            <div class="nav-section-title">
+                Main
+            </div>
+        </li>
+
+        <!-- Dashboard -->
+        <li class="nav-item">
+            <a href="{{ url_for('dashboard.dashboard') }}" class="nav-link {% if request.endpoint.startswith('dashboard.dashboard') %}active{% endif %}">
+                <div class="icon-container">
+                    <i data-feather="home"></i>
+                </div>
+                <span class="nav-text">Dashboard</span>
+            </a>
+        </li>
+
+        <!-- Reports - direct link to identification reports -->
+        <li class="nav-item">
+            <a href="{{ url_for('identification.list_reports') }}" class="nav-link {% if request.endpoint == 'identification.list_reports' %}active{% endif %}">
+                <div class="icon-container">
+                    <i data-feather="file-text"></i>
+                </div>
+                <span class="nav-text">Reports</span>
+            </a>
+        </li>
+
+        <!-- RECORDS GROUP -->
+        <li class="nav-item nav-section">
+            <div class="nav-section-title">
+                Records
+            </div>
+        </li>
+
+        <!-- Criminals -->
+        <li class="nav-item">
+            <a href="{{ url_for('criminals.list_criminals') }}" class="nav-link {% if request.endpoint.startswith('criminals') and not request.endpoint.startswith('criminals.list_reports') %}active{% endif %}">
+                <div class="icon-container">
+                    <i data-feather="user-x"></i>
+                </div>
+                <span class="nav-text">Criminals</span>
+            </a>
+        </li>
+
+        <!-- Missing Persons -->
+        <li class="nav-item">
+            <a href="{{ url_for('missing.list_missing_persons') }}" class="nav-link {% if request.endpoint.startswith('missing') and not request.endpoint.startswith('missing.list_reports') %}active{% endif %}">
+                <div class="icon-container">
+                    <i data-feather="users"></i>
+                </div>
+                <span class="nav-text">Missing Persons</span>
+            </a>
+        </li>
+
+        <!-- IDENTIFICATION GROUP -->
+        <li class="nav-item nav-section">
+            <div class="nav-section-title">
+                Identification
+            </div>
+        </li>
+
+        <!-- Identification -->
+        <li class="nav-item">
+            <a href="{{ url_for('identification.identify_form') }}" class="nav-link {% if request.endpoint == 'identification.identify_form' %}active{% endif %}">
+                <div class="icon-container">
+                    <i data-feather="camera"></i>
+                </div>
+                <span class="nav-text">Identification</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- User Profile with Hover Animation -->
+    <div class="user-profile">
+        <div class="profile-avatar">
+            <img src="{{ url_for('static', filename='img/profile.jpg') }}" alt="User Profile">
+            <div class="status-indicator"></div>
+        </div>
+        <div class="user-info">
+            <p class="user-name">Welcome back</p>
+            <p class="user-status">Officer</p>
+        </div>
+        <a href="#" class="logout-btn" title="Logout">
+            <i data-feather="power"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Toggle button for mobile -->
+<div class="sidebar-toggle">
+    <i data-feather="menu"></i>
+</div>
+
+<!-- Overlay for mobile when sidebar is open -->
+<div class="sidebar-overlay"></div>
