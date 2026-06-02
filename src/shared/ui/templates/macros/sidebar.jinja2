@@ -1,107 +1,443 @@
-<!-- Improved Sidebar Navigation -->
+{# URL Configuration #}
+{% set nav_urls = {
+    'dashboard': {'enabled': false, 'endpoint': 'dashboard.dashboard'},
+    'reports': {'enabled': false, 'endpoint': 'identification.list_reports'},
+    'criminals': {'enabled': false, 'endpoint': 'criminals.list_criminals'},
+    'missing': {'enabled': false, 'endpoint': 'missing.list_missing_persons'},
+    'identification': {'enabled': false, 'endpoint': 'identification.identify_form'},
+    'users': {'enabled': true, 'endpoint': 'user_management.list_users'},
+    'logout': {'enabled': true, 'endpoint': 'auth.logout'}
+} %}
+
+{% macro get_url(key) -%}
+    {%- if nav_urls[key].enabled -%}
+        {{ url_for(nav_urls[key].endpoint) }}
+    {%- else -%}
+        #
+    {%- endif -%}
+{%- endmacro %}
+
+<style>
+/* ===========================
+   USER PROFILE FOOTER - NORMAL STATE
+   =========================== */
+.user-profile {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: all 0.3s ease;
+    z-index: 10;
+    min-height: 72px;
+}
+
+.profile-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.profile-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg-primary);
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.user-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin: 2px 0 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.logout-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.logout-btn:hover {
+    background: var(--error-bg);
+    border-color: var(--error);
+    color: var(--error);
+    transform: translateY(-2px);
+}
+
+.logout-btn i {
+    font-size: 18px;
+}
+
+/* ===========================
+   COLLAPSED STATE - PERFECTLY CENTERED
+   =========================== */
+.sidebar.collapsed .user-profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 0;
+}
+
+.sidebar.collapsed .profile-content {
+    display: none;
+}
+
+.sidebar.collapsed .logout-btn {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .logout-btn i {
+    font-size: 20px;
+}
+
+/* ===========================
+   HOVER EFFECTS
+   =========================== */
+.user-profile:hover .profile-avatar {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.sidebar.collapsed .user-profile:hover .profile-avatar {
+    transform: none;
+}
+
+.sidebar.collapsed .logout-btn:hover {
+    transform: scale(1.1);
+}
+
+/* ===========================
+   SIDEBAR SPACING
+   =========================== */
+.sidebar {
+    padding-bottom: 72px;
+}
+
+.nav-scroll-area {
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 20px;
+}
+
+/* Custom scrollbar */
+.nav-scroll-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.nav-scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.nav-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+.nav-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-gold);
+}
+
+/* ===========================
+   TOOLTIP
+   =========================== */
+.logout-btn::after {
+    content: 'Logout';
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    z-index: 1000;
+}
+
+.logout-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar.collapsed .logout-btn::after {
+    left: calc(100% + 12px);
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+}
+
+.sidebar.collapsed .logout-btn:hover::after {
+    left: calc(100% + 16px);
+}
+
+/* ===========================
+   MOBILE RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+    .user-profile {
+        padding: 12px;
+    }
+
+    .profile-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+
+    .user-name {
+        font-size: 12px;
+    }
+
+    .user-status {
+        font-size: 10px;
+    }
+
+    .logout-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .logout-btn i {
+        font-size: 16px;
+    }
+}
+
+/* ===========================
+   ACCESSIBILITY
+   =========================== */
+.logout-btn:focus {
+    outline: 2px solid var(--primary-gold);
+    outline-offset: 2px;
+}
+
+.logout-btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.user-profile {
+    user-select: none;
+}
+
+/* ===========================
+   PRINT
+   =========================== */
+@media print {
+    .user-profile {
+        display: none;
+    }
+}
+</style>
+
 <div class="sidebar">
-    <!-- Logo Section with Animation -->
+    <!-- Logo Section -->
     <div class="logo-section">
         <div class="logo-grid">
-            <i data-feather="grid"></i>
+            <i class="fas fa-shield-alt"></i>
         </div>
-        <h1>Face X <span class="logo-version">v1</span></h1>
+        <h1>Sentinel <span class="logo-version">v1.0</span></h1>
     </div>
 
-    <!-- Main Navigation with Animations -->
-    <ul class="nav-menu">
-        <!-- Dashboard -->
-        <li class="nav-item nav-section">
-            <div class="nav-section-title">
-                Main
-            </div>
-        </li>
+    <!-- Scrollable Navigation Area -->
+    <div class="nav-scroll-area">
+        <ul class="nav-menu">
+            <!-- Main Section -->
+            <li class="nav-section">
+                <div class="nav-section-title">Main</div>
+            </li>
 
-        <!-- Dashboard -->
-        <li class="nav-item">
-            <a href="{{ url_for('dashboard.dashboard') }}" class="nav-link {% if request.endpoint.startswith('dashboard.dashboard') %}active{% endif %}">
-                <div class="icon-container">
-                    <i data-feather="home"></i>
-                </div>
-                <span class="nav-text">Dashboard</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a href="{{ get_url('dashboard') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.dashboard') %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </li>
 
-        <!-- Reports - direct link to identification reports -->
-        <li class="nav-item">
-            <a href="{{ url_for('identification.list_reports') }}" class="nav-link {% if request.endpoint == 'identification.list_reports' %}active{% endif %}">
-                <div class="icon-container">
-                    <i data-feather="file-text"></i>
-                </div>
-                <span class="nav-text">Reports</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a href="{{ get_url('reports') }}" class="nav-link {% if request.endpoint == 'identification.list_reports' %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <span class="nav-text">Reports</span>
+                </a>
+            </li>
 
-        <!-- RECORDS GROUP -->
-        <li class="nav-item nav-section">
-            <div class="nav-section-title">
-                Records
-            </div>
-        </li>
+            <!-- Records Section -->
+            <li class="nav-section">
+                <div class="nav-section-title">Records</div>
+            </li>
 
-        <!-- Criminals -->
-        <li class="nav-item">
-            <a href="{{ url_for('criminals.list_criminals') }}" class="nav-link {% if request.endpoint.startswith('criminals') and not request.endpoint.startswith('criminals.list_reports') %}active{% endif %}">
-                <div class="icon-container">
-                    <i data-feather="user-x"></i>
-                </div>
-                <span class="nav-text">Criminals</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a href="{{ get_url('criminals') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('criminals') and not request.endpoint.startswith('criminals.list_reports') %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <span class="nav-text">Criminals</span>
+                </a>
+            </li>
 
-        <!-- Missing Persons -->
-        <li class="nav-item">
-            <a href="{{ url_for('missing.list_missing_persons') }}" class="nav-link {% if request.endpoint.startswith('missing') and not request.endpoint.startswith('missing.list_reports') %}active{% endif %}">
-                <div class="icon-container">
-                    <i data-feather="users"></i>
-                </div>
-                <span class="nav-text">Missing Persons</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a href="{{ get_url('missing') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('missing') and not request.endpoint.startswith('missing.list_reports') %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span class="nav-text">Missing Persons</span>
+                </a>
+            </li>
 
-        <!-- IDENTIFICATION GROUP -->
-        <li class="nav-item nav-section">
-            <div class="nav-section-title">
-                Identification
-            </div>
-        </li>
+            <!-- Identification Section -->
+            <li class="nav-section">
+                <div class="nav-section-title">Identification</div>
+            </li>
 
-        <!-- Identification -->
-        <li class="nav-item">
-            <a href="{{ url_for('identification.identify_form') }}" class="nav-link {% if request.endpoint == 'identification.identify_form' %}active{% endif %}">
-                <div class="icon-container">
-                    <i data-feather="camera"></i>
-                </div>
-                <span class="nav-text">Identification</span>
-            </a>
-        </li>
-    </ul>
+            <li class="nav-item">
+                <a href="{{ get_url('identification') }}" class="nav-link {% if request.endpoint == 'identification.identify_form' %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <span class="nav-text">Face Recognition</span>
+                </a>
+            </li>
 
-    <!-- User Profile with Hover Animation -->
+            <!-- Administration Section -->
+            <li class="nav-section">
+                <div class="nav-section-title">Administration</div>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ get_url('users') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('user_management') %}active{% endif %}">
+                    <div class="icon-container">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <span class="nav-text">User Management</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- User Profile Footer -->
     <div class="user-profile">
-        <div class="profile-avatar">
-            <img src="{{ url_for('static', filename='img/profile.jpg') }}" alt="User Profile">
-            <div class="status-indicator"></div>
+        <div class="profile-content">
+            <div class="profile-avatar">
+                {% if current_user %}
+                    {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+                {% else %}
+                    <i class="fas fa-user"></i>
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <p class="user-name">
+                    {% if current_user %}
+                        {{ current_user.first_name }} {{ current_user.last_name }}
+                    {% else %}
+                        Guest User
+                    {% endif %}
+                </p>
+                <p class="user-status">{{ current_user.role.value if current_user else 'Officer' }}</p>
+            </div>
         </div>
-        <div class="user-info">
-            <p class="user-name">Welcome back</p>
-            <p class="user-status">Officer</p>
-        </div>
-        <a href="#" class="logout-btn" title="Logout">
-            <i data-feather="power"></i>
+        <a href="{{ get_url('logout') }}" class="logout-btn" title="Logout" onclick="return confirm('Are you sure you want to logout?')">
+            <i class="fas fa-sign-out-alt"></i>
         </a>
     </div>
 </div>
 
-<!-- Toggle button for mobile -->
-<div class="sidebar-toggle">
-    <i data-feather="menu"></i>
-</div>
+<!-- Mobile Toggle Button -->
+<button class="sidebar-toggle">
+    <i class="fas fa-bars"></i>
+</button>
 
-<!-- Overlay for mobile when sidebar is open -->
+<!-- Mobile Overlay -->
 <div class="sidebar-overlay"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        });
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+});
+</script>
