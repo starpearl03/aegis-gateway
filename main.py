@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from src.config.factory import create_app
 from src.modules.authentication.presentation.controller.auth_controller import auth_bp
+from src.modules.authentication.presentation.controller.user_management_controller import user_management_bp
 
 
 def load_environment():
@@ -82,12 +83,16 @@ def create_application():
     # Custom error handling
     error_handlers = []
 
+    # Blueprints
+    blueprints = [user_management_bp, auth_bp]
+
 
     try:
         # Create Flask app by passing config sections as parameters
         flask_app = create_app(
             Flask(__name__),
             configs=configs,
+            blueprints=blueprints,
             error_handlers=error_handlers
         )
 

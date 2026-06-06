@@ -6,15 +6,16 @@ from flask_session import Session
 from flask_bcrypt import Bcrypt
 
 from src.modules.authentication.internal.admin_initializer import AdminInitializer
-from src.shared.configs.blueprint_registry import BlueprintRegistry
 from src.shared.data.database import db
 
 
 def create_app(flask_app,
-               configs,
+               configs, blueprints=None,
                error_handlers=None):
     """Create and configure the Flask application using passed config parameters."""
 
+    if blueprints is None:
+        blueprints = []
     if error_handlers is None:
         error_handlers = []
 
@@ -157,7 +158,7 @@ def create_app(flask_app,
     # ============================================
     # Register Blueprints (controllers)
     # ============================================
-    for blueprint in BlueprintRegistry.get_all():
+    for blueprint in blueprints:
         app.register_blueprint(blueprint)
         app.logger.info(f"Registered blueprint: {blueprint.name}")
 
