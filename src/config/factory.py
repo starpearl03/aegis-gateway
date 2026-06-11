@@ -2,6 +2,7 @@ import os
 import logging as python_logging
 from datetime import timedelta
 
+from flask import send_from_directory
 from flask_session import Session
 from flask_bcrypt import Bcrypt
 
@@ -125,6 +126,17 @@ def create_app(flask_app,
 
     # Create all tables (including sessions table) WITHIN app context
     with app.app_context():
+        # Enable pgvector extension FIRST (before creating tables)
+        try:
+            app.logger.info("Enabling pgvector extension...")
+            db.session.execute(db.text('CREATE EXTENSION IF NOT EXISTS vector;'))
+            db.session.commit()
+            app.logger.info("✅ pgvector extension enabled")
+        except Exception as e:
+            app.logger.warning(f"⚠️ Could not enable pgvector extension: {e}")
+            db.session.rollback()
+
+        # Now create all tables
         db.create_all()
         app.logger.info("Database tables created successfully")
 
@@ -167,6 +179,45 @@ def create_app(flask_app,
     # ============================================
     for error, handler in error_handlers:
         app.register_error_handler(error, handler)
+
+        # ============================================
+        # File Upload Configuration
+        # ============================================
+    uploads_config = configs.get("uploads")
+
+    app.config['UPLOAD_FOLDER_ROOT'] = uploads_config.root_folder
+    app.config['UPLOAD_FOLDER_CRIMINALS'] = uploads_config.criminals_folder
+    app.config['UPLOAD_FOLDER_MISSING_PERSONS'] = uploads_config.missing_persons_folder
+    app.config['UPLOAD_FOLDER_EVIDENCE'] = uploads_config.evidence_folder
+    app.config['MAX_FILE_SIZE'] = uploads_config.max_file_size_mb * 1024 * 1024  # Convert to bytes
+    app.config['ALLOWED_IMAGE_EXTENSIONS'] = set(uploads_config.allowed_image_extensions)
+    app.config['ALLOWED_EVIDENCE_EXTENSIONS'] = set(uploads_config.allowed_evidence_extensions)
+
+    # Create upload directories
+    os.makedirs(uploads_config.criminals_folder, exist_ok=True)
+    os.makedirs(uploads_config.missing_persons_folder, exist_ok=True)
+    os.makedirs(uploads_config.evidence_folder, exist_ok=True)
+
+    # Make upload folders accessible as static files for templates
+    app.add_url_rule(
+        f'/{uploads_config.root_folder}/<path:filename>',
+        endpoint='uploads',
+        view_func=lambda filename: send_from_directory(uploads_config.root_folder, filename)
+    )
+
+    @app.template_filter('image_url')
+    def image_url_filter(image_path):
+        """Convert database image path to URL-friendly format"""
+        if not image_path:
+            return ''
+
+        # Remove 'uploads/' or 'uploads\' prefix
+        path = image_path.replace('uploads/', '').replace('uploads\\', '')
+
+        # Convert all backslashes to forward slashes
+        path = path.replace('\\', '/')
+
+        return path
 
     # ============================================
     # Register global error handlers

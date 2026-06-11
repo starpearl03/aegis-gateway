@@ -73,3 +73,14 @@ logging:
   level: ${LOG_LEVEL}
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file_path: ${LOG_FILE_PATH}
+
+
+# File upload configuration
+uploads:
+  root_folder: ${UPLOAD_FOLDER_ROOT}
+  criminals_folder: ${UPLOAD_FOLDER_CRIMINALS}
+  missing_persons_folder: ${UPLOAD_FOLDER_MISSING_PERSONS}
+  evidence_folder: ${UPLOAD_FOLDER_EVIDENCE}
+  max_file_size_mb: ${MAX_FILE_SIZE_MB}
+  allowed_image_extensions: ['png', 'jpg', 'jpeg', 'gif']
+  allowed_evidence_extensions: ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt', 'mp4', 'avi', 'mov']
