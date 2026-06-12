@@ -21,20 +21,20 @@
    ROOT VARIABLES - DARK LUXURY THEME
    =========================== */
 :root {
-    /* Gold Accents */
+    /* Gold Accents - Used sparingly */
     --primary-gold: #d4af37;
     --primary-gold-light: #f4d03f;
     --primary-gold-dark: #b8860b;
 
-    /* Dark Backgrounds */
+    /* Dark Backgrounds - Primary theme colors */
     --bg-primary: #0a0e27;
-    --bg-secondary: #141b2d;
-    --bg-tertiary: #1f2937;
-    --bg-hover: #252f45;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #1e293b;
+    --bg-hover: #1a2235;
 
     /* Surface Colors */
-    --surface: #1a1f35;
-    --surface-elevated: #232840;
+    --surface: #141b2d;
+    --surface-elevated: #1a1f35;
     --card-bg: rgba(26, 31, 53, 0.8);
 
     /* Text Colors */
@@ -42,9 +42,10 @@
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
 
-    /* Border Colors */
-    --border: rgba(148, 163, 184, 0.12);
-    --border-light: rgba(148, 163, 184, 0.08);
+    /* Border Colors - Subtle */
+    --border: rgba(148, 163, 184, 0.1);
+    --border-light: rgba(148, 163, 184, 0.06);
+    --border-gold: rgba(212, 175, 55, 0.2);
 
     /* Status Colors */
     --success: #10b981;
@@ -64,7 +65,7 @@
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-    --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.3);
+    --shadow-gold-subtle: 0 2px 10px rgba(212, 175, 55, 0.15);
 
     /* Transitions */
     --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -92,37 +93,55 @@ html, body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: var(--bg-primary);
 }
 
 /* ===========================
-   ANIMATED BACKGROUND
+   ANIMATED BACKGROUND - Matching styles.scss
    =========================== */
-.bg-animated {
+body {
+    background: linear-gradient(135deg,
+        #0a0f1e 0%,
+        #0f172a 25%,
+        #1e293b 50%,
+        #0f172a 75%,
+        #0a0f1e 100%
+    );
+    position: relative;
+}
+
+body::before {
+    content: '';
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #0a0e27 0%, #141b2d 50%, #1a1f35 100%);
+    right: 0;
+    bottom: 0;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.02) 0%, transparent 50%);
+    pointer-events: none;
     z-index: 0;
 }
 
-.bg-animated::before {
+body::after {
     content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 50%);
-    animation: bgPulse 15s ease-in-out infinite;
+    position: fixed;
+    width: min(800px, 50vw);
+    height: min(800px, 50vw);
+    top: -200px;
+    right: -200px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(60px);
+    animation: float 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
 }
 
-@keyframes bgPulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-100px, -100px); }
 }
 
 /* ===========================
@@ -154,15 +173,15 @@ html, body {
 
 .toast:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), 0 0 20px rgba(212, 175, 55, 0.2);
-    border-color: var(--primary-gold);
+    box-shadow: var(--shadow-lg), var(--shadow-gold-subtle);
+    border-color: var(--border-gold);
 }
 
 .toast-progress {
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 3px;
+    height: 2px;
     width: 100%;
     transform-origin: left;
     transition: transform linear;
@@ -196,7 +215,11 @@ html, body {
 .toast-icon.success { background: var(--success-bg); color: var(--success); }
 .toast-icon.error { background: var(--error-bg); color: var(--error); }
 .toast-icon.warning { background: var(--warning-bg); color: var(--warning); }
-.toast-icon.info { background: rgba(212, 175, 55, 0.15); color: var(--primary-gold); }
+.toast-icon.info {
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--primary-gold);
+    border: 1px solid var(--border-gold);
+}
 
 .toast-header strong {
     color: var(--text-primary);
@@ -227,7 +250,7 @@ html, body {
 
 .toast-header .btn-close:hover {
     background: var(--bg-hover);
-    color: var(--text-primary);
+    color: var(--primary-gold);
 }
 
 .toast-body {
@@ -255,7 +278,8 @@ html, body {
    =========================== */
 .sidebar {
     width: var(--sidebar-width);
-    background: var(--bg-secondary);
+    background: transparent;
+    backdrop-filter: blur(10px);
     border-right: 1px solid var(--border);
     height: 100vh;
     position: fixed;
@@ -264,7 +288,6 @@ html, body {
     z-index: 100;
     display: flex;
     flex-direction: column;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
     transition: var(--transition);
 }
 
@@ -274,7 +297,7 @@ html, body {
     align-items: center;
     padding: 24px 20px;
     border-bottom: 1px solid var(--border);
-    background: var(--bg-primary);
+    background: transparent;
     flex-shrink: 0;
     transition: var(--transition);
 }
@@ -284,18 +307,19 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-light) 100%);
+    background: var(--surface-elevated);
     width: 48px;
     height: 48px;
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-gold);
+    box-shadow: var(--shadow-sm);
     transition: var(--transition);
     flex-shrink: 0;
+    border: 1px solid var(--border-gold);
 }
 
 .logo-grid i {
     font-size: 22px;
-    color: var(--bg-primary);
+    color: var(--primary-gold);
 }
 
 .logo-section h1 {
@@ -308,12 +332,13 @@ html, body {
 
 .logo-version {
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--primary-gold);
     margin-left: 8px;
     font-weight: 600;
     padding: 3px 8px;
     border-radius: 6px;
-    background: var(--bg-hover);
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid var(--border-gold);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -402,34 +427,35 @@ html, body {
     transition: var(--transition);
 }
 
-/* Active State */
+/* Active State - Darker background with white border */
 .nav-link.active {
-    background: rgba(212, 175, 55, 0.12);
+    background: rgba(10, 14, 39, 0.6);
     color: var(--text-primary);
     font-weight: 600;
+    border: 1px solid var(--border);
 }
 
 .nav-link.active .icon-container {
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
-    box-shadow: var(--shadow-gold);
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid var(--border-gold);
 }
 
 .nav-link.active .icon-container i {
-    color: var(--bg-primary);
+    color: var(--primary-gold);
 }
 
 .nav-link:hover:not(.active) .icon-container {
-    background: var(--surface);
+    background: var(--surface-elevated);
 }
 
 .nav-link:hover:not(.active) .icon-container i {
     color: var(--text-primary);
 }
 
-/* Badge */
+/* Badge - Small gold accent */
 .notification-badge {
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
-    color: var(--bg-primary);
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--primary-gold);
     font-size: 11px;
     font-weight: 700;
     padding: 3px 8px;
@@ -440,7 +466,7 @@ html, body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-gold);
+    border: 1px solid var(--border-gold);
 }
 
 /* User Profile Footer */
@@ -449,8 +475,7 @@ html, body {
     align-items: center;
     padding: 20px 16px;
     border-top: 1px solid var(--border);
-    background: var(--bg-primary);
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+    background: transparent;
     transition: var(--transition);
     flex-shrink: 0;
     gap: 14px;
@@ -480,7 +505,7 @@ html, body {
     height: 12px;
     border-radius: 50%;
     background: var(--success);
-    border: 3px solid var(--bg-primary);
+    border: 3px solid rgba(10, 14, 39, 0.8);
     box-shadow: 0 0 0 1px var(--success);
 }
 
@@ -520,6 +545,7 @@ html, body {
     background: var(--surface);
     text-decoration: none;
     flex-shrink: 0;
+    border: 1px solid var(--border);
 }
 
 .logout-btn i {
@@ -527,26 +553,25 @@ html, body {
 }
 
 .logout-btn:hover {
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
-    color: var(--bg-primary);
-    box-shadow: var(--shadow-gold);
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--primary-gold);
+    border-color: var(--border-gold);
     transform: translateY(-2px);
 }
 
 .user-profile:hover .profile-avatar img,
 .user-profile:hover .profile-avatar > div {
     transform: scale(1.05);
-    box-shadow: var(--shadow-gold);
-    border-color: var(--primary-gold);
+    border-color: var(--border-gold);
 }
 
-/* Mobile Toggle */
+/* Mobile Toggle - Gold accent */
 .sidebar-toggle {
     position: fixed;
     right: 24px;
     bottom: 24px;
     z-index: 99;
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
+    background: var(--surface-elevated);
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -554,21 +579,22 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--shadow-gold), var(--shadow-lg);
+    box-shadow: var(--shadow-lg);
     transform: scale(0);
     opacity: 0;
     transition: var(--transition);
-    border: none;
+    border: 2px solid var(--border-gold);
 }
 
 .sidebar-toggle i {
-    color: var(--bg-primary);
+    color: var(--primary-gold);
     font-size: 22px;
 }
 
 .sidebar-toggle:hover {
     transform: scale(1.1);
-    box-shadow: 0 8px 30px rgba(212, 175, 55, 0.5);
+    background: rgba(212, 175, 55, 0.1);
+    box-shadow: var(--shadow-lg), var(--shadow-gold-subtle);
 }
 
 .sidebar-overlay {
@@ -591,21 +617,20 @@ html, body {
 }
 
 /* ===========================
-   MAIN CONTENT AREA
+   MAIN CONTENT AREA - FIXED SCROLLING
    =========================== */
 .main-container {
     display: flex;
-    height: 100%;
-    overflow: hidden;
+    min-height: 100vh;
     position: relative;
 }
 
 .content-area {
     flex: 1;
     margin-left: var(--sidebar-width);
-    width: calc(100% - var(--sidebar-width));
+    width: calc(100vw - var(--sidebar-width));
     transition: var(--transition);
-    height: 100%;
+    height: 100vh;
     padding: 32px;
     position: relative;
     overflow-y: auto;
@@ -616,9 +641,34 @@ html, body {
 .content-wrapper {
     width: 100%;
     max-width: 100%;
+    min-height: 100%;
 }
 
-/* Notification Bell */
+/* Custom Scrollbar for Content Area */
+.content-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.content-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.content-area::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+.content-area::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-gold);
+}
+
+/* COLLAPSED SIDEBAR ADJUSTMENT - FIXED */
+.sidebar.collapsed ~ .content-area {
+    margin-left: var(--sidebar-collapsed-width) !important;
+    width: calc(100vw - var(--sidebar-collapsed-width)) !important;
+}
+
+/* Notification Bell - Small gold accent */
 .notification-bell {
     position: fixed;
     top: 32px;
@@ -638,10 +688,10 @@ html, body {
 }
 
 .notification-bell:hover {
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
+    background: rgba(212, 175, 55, 0.1);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-gold);
-    border-color: var(--primary-gold);
+    border-color: var(--border-gold);
+    box-shadow: var(--shadow-md), var(--shadow-gold-subtle);
 }
 
 .notification-bell i {
@@ -651,7 +701,7 @@ html, body {
 }
 
 .notification-bell:hover i {
-    color: var(--bg-primary);
+    color: var(--primary-gold);
 }
 
 .notification-dot {
@@ -660,9 +710,9 @@ html, body {
     right: 10px;
     width: 8px;
     height: 8px;
-    background: var(--error);
+    background: var(--primary-gold);
     border-radius: 50%;
-    border: 2px solid var(--surface-elevated);
+    border: 2px solid rgba(26, 31, 53, 0.8);
     animation: pulse 2s ease-in-out infinite;
 }
 
@@ -681,7 +731,7 @@ html, body {
 
     .content-area {
         margin-left: var(--sidebar-collapsed-width);
-        width: calc(100% - var(--sidebar-collapsed-width));
+        width: calc(100vw - var(--sidebar-collapsed-width));
     }
 
     .logo-section {
@@ -700,6 +750,10 @@ html, body {
 
     .nav-link {
         justify-content: center;
+        padding: 12px 0;
+    }
+
+    .nav-link.active {
         padding: 12px 0;
     }
 
@@ -723,7 +777,6 @@ html, body {
     /* Hover expand on tablet */
     .sidebar:hover {
         width: var(--sidebar-width);
-        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
     }
 
     .sidebar:hover .logo-section {
@@ -745,6 +798,10 @@ html, body {
         padding: 12px 12px;
     }
 
+    .sidebar:hover .nav-link.active {
+        padding: 12px 12px;
+    }
+
     .sidebar:hover .nav-text,
     .sidebar:hover .nav-section-title,
     .sidebar:hover .notification-badge {
@@ -761,6 +818,12 @@ html, body {
     .sidebar:hover .logout-btn {
         display: flex;
     }
+
+    /* Fix for collapsed state on tablet */
+    .sidebar.collapsed ~ .content-area {
+        margin-left: var(--sidebar-collapsed-width) !important;
+        width: calc(100vw - var(--sidebar-collapsed-width)) !important;
+    }
 }
 
 /* ===========================
@@ -774,7 +837,7 @@ html, body {
 
     .content-area {
         margin-left: 0;
-        width: 100%;
+        width: 100vw;
         padding: 20px;
     }
 
@@ -798,6 +861,10 @@ html, body {
 
     .nav-link {
         justify-content: flex-start;
+        padding: 12px 12px;
+    }
+
+    .nav-link.active {
         padding: 12px 12px;
     }
 
@@ -837,15 +904,16 @@ html, body {
         top: 24px;
         right: 24px;
     }
+
+    /* Reset collapsed state for mobile */
+    .sidebar.collapsed ~ .content-area {
+        margin-left: 0 !important;
+        width: 100vw !important;
+    }
 }
 </style>
 </head>
 <body>
-    <!-- Animated Background -->
-    <div class="bg-animated"></div>
-
-    <div id="toastContainer"></div>
-
     <div class="main-container">
         {% include 'macros/sidebar.jinja2' %}
 
@@ -860,6 +928,8 @@ html, body {
             </div>
         </div>
     </div>
+
+    <div id="toastContainer"></div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
@@ -1085,3 +1155,4 @@ html, body {
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+                }

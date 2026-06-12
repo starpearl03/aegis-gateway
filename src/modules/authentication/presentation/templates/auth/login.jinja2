@@ -8,127 +8,122 @@
     <script src="https://unpkg.com/feather-icons"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* ============================================
+           GLOBAL THEME - Applied to Login Page
+           ============================================ */
+
+        /* CSS Variables */
         :root {
-            /* Gold Accents */
-            --primary-gold: #d4af37;
-            --primary-gold-light: #f4d03f;
-            --primary-gold-dark: #b8860b;
-
-            /* Dark Backgrounds */
-            --bg-primary: #0a0e27;
-            --bg-secondary: #141b2d;
-            --bg-tertiary: #1f2937;
-            --bg-hover: #252f45;
-
-            /* Surface Colors */
-            --surface: #1a1f35;
-            --surface-elevated: #232840;
-            --card-bg: rgba(26, 31, 53, 0.8);
-
-            /* Text Colors */
-            --text-primary: #e8edf2;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-
-            /* Border Colors */
-            --border: rgba(148, 163, 184, 0.12);
-            --border-light: rgba(148, 163, 184, 0.08);
-
-            /* Status Colors */
-            --success: #10b981;
-            --success-bg: rgba(16, 185, 129, 0.1);
-            --error: #ef4444;
-            --error-bg: rgba(239, 68, 68, 0.1);
-            --warning: #f59e0b;
-            --warning-bg: rgba(245, 158, 11, 0.1);
-            --info: #3b82f6;
-            --info-bg: rgba(59, 130, 246, 0.1);
-
-            /* Shadows */
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-            --shadow-gold: 0 4px 20px rgba(212, 175, 55, 0.3);
-
-            /* Transitions */
-            --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-slow: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-
-            /* Border Radius */
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
+            --primary-color: #6366f1;
+            --secondary-color: #10b981;
+            --accent-color: #f59e0b;
+            --innovation-purple: #8b5cf6;
+            --innovation-blue: #3b82f6;
+            --innovation-teal: #06b6d4;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f8fafc;
+            --twitter-blue: #1da1f2;
+            --pro-dark: #2E2E2E;
+            --pro-gray: #6C757D;
+            --pro-light-gray: #F8F9FA;
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-border: #334155;
+            --dark-text: #e2e8f0;
+            --dark-text-muted: #94a3b8;
         }
 
+        /* Global Reset */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        /* Body & HTML Base Styles */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Background Gradient (Same for all pages) */
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            min-height: 100vh;
+            background: linear-gradient(135deg,
+                #0a0f1e 0%,
+                #0f172a 25%,
+                #1e293b 50%,
+                #0f172a 75%,
+                #0a0f1e 100%
+            );
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            overflow: hidden;
-            background: var(--bg-primary);
+            min-height: 100vh;
         }
 
-        /* Dark animated gradient background with gold and blue accents */
-        .bg-animated {
-            position: absolute;
+        /* Background Effects Layer 1 */
+        body::before {
+            content: '';
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                linear-gradient(135deg,
-                    #0a0e27 0%,
-                    #141b2d 25%,
-                    #1a1f35 50%,
-                    #0f1629 75%,
-                    #0a0e27 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
-        @keyframes gradientShift {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
+        /* Background Effects Layer 2 - Floating Glow */
+        body::after {
+            content: '';
+            position: fixed;
+            width: min(800px, 50vw);
+            height: min(800px, 50vw);
+            top: -200px;
+            right: -200px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(60px);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
         }
 
-        /* Animated gold and blue glow overlay */
-        .glass-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.04) 0%, transparent 60%);
-            animation: glowPulse 8s ease-in-out infinite;
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-100px, -100px); }
         }
 
-        @keyframes glowPulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.7;
-            }
+        /* ============================================
+           LOGIN PAGE SPECIFIC STYLES
+           ============================================ */
+
+        /* Additional variables for login page components */
+        :root {
+            --surface: #141b2d;
+            --surface-elevated: #1a1f35;
+            --bg-hover: #1a2235;
+            --border: rgba(148, 163, 184, 0.1);
+            --border-accent: rgba(59, 130, 246, 0.3);
+            --text-primary: #e8edf2;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+            --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
         }
 
         /* Toast Container */
@@ -139,10 +134,9 @@
             z-index: 1055;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
-        /* Toast Styles - Dark Theme */
         .toast {
             background: var(--surface-elevated);
             backdrop-filter: blur(20px);
@@ -152,51 +146,35 @@
             overflow: hidden;
             cursor: pointer;
             position: relative;
-            min-width: 360px;
-            max-width: 400px;
+            min-width: 320px;
+            max-width: 360px;
             transition: var(--transition);
         }
 
         .toast:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--text-secondary);
         }
 
         .toast-progress {
             position: absolute;
             bottom: 0;
             left: 0;
-            height: 3px;
+            height: 2px;
             width: 100%;
             transform-origin: left;
             transition: transform linear;
         }
 
-        .toast-progress.success {
-            background: linear-gradient(90deg, var(--success), #34d399);
-        }
+        .toast-progress.success { background: linear-gradient(90deg, var(--secondary-color), #34d399); }
+        .toast-progress.error { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .toast-progress.warning { background: linear-gradient(90deg, var(--accent-color), #fbbf24); }
+        .toast-progress.info { background: linear-gradient(90deg, var(--innovation-blue), #60a5fa); }
 
-        .toast-progress.error {
-            background: linear-gradient(90deg, var(--error), #f87171);
-        }
-
-        .toast-progress.warning {
-            background: linear-gradient(90deg, var(--warning), #fbbf24);
-        }
-
-        .toast-progress.info {
-            background: linear-gradient(90deg, var(--primary-gold), var(--primary-gold-light));
-        }
-
-        .toast:hover .toast-progress {
-            animation-play-state: paused;
-        }
-
-        /* Toast Header */
         .toast-header {
             background: transparent;
             border-bottom: 1px solid var(--border);
-            color: var(--text-primary);
             padding: 10px 12px;
             display: flex;
             align-items: center;
@@ -204,46 +182,30 @@
         }
 
         .toast-icon {
-            width: 18px;
-            height: 18px;
-            border-radius: 5px;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 12px;
             flex-shrink: 0;
         }
 
-        .toast-icon.success {
-            background: var(--success-bg);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .toast-icon.error {
-            background: var(--error-bg);
-            color: var(--error);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .toast-icon.warning {
-            background: var(--warning-bg);
-            color: var(--warning);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
+        .toast-icon.success { background: rgba(16, 185, 129, 0.1); color: var(--secondary-color); }
+        .toast-icon.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .toast-icon.warning { background: rgba(245, 158, 11, 0.1); color: var(--accent-color); }
         .toast-icon.info {
-            background: rgba(212, 175, 55, 0.1);
-            color: var(--primary-gold);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--innovation-blue);
+            border: 1px solid var(--border-accent);
         }
 
         .toast-header strong {
             color: var(--text-primary);
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             flex: 1;
-            letter-spacing: -0.1px;
         }
 
         .toast-header .btn-close {
@@ -257,7 +219,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 4px;
+            border-radius: 6px;
             transition: var(--transition-fast);
             font-size: 16px;
             line-height: 1;
@@ -268,42 +230,27 @@
             color: var(--text-primary);
         }
 
-        /* Toast Body */
         .toast-body {
             background: transparent;
             color: var(--text-secondary);
-            padding: 14px 16px 16px;
+            padding: 12px 12px 14px;
             font-size: 14px;
-            line-height: 1.6;
-            font-weight: 500;
+            line-height: 1.5;
         }
 
-        .toast.show {
-            animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .toast.show { animation: toastSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toast.hide { animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1); }
 
         @keyframes toastSlideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100%) scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0) scale(1);
-            }
-        }
-
-        .toast.hide {
-            animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1);
+            from { opacity: 0; transform: translateX(100%) scale(0.9); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
         }
 
         @keyframes toastSlideOut {
-            to {
-                opacity: 0;
-                transform: translateX(100%) scale(0.9);
-            }
+            to { opacity: 0; transform: translateX(100%) scale(0.9); }
         }
 
+        /* Login Container */
         .login-container {
             position: relative;
             z-index: 10;
@@ -336,23 +283,24 @@
             width: 72px;
             height: 72px;
             margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-light) 100%);
+            background: var(--surface);
             border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: var(--shadow-gold);
-            transition: var(--transition);
-        }
-
-        .logo:hover {
-            transform: translateY(-4px) scale(1.05);
-            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
+            box-shadow: var(--shadow-md);
+            border: 2px solid var(--border);
         }
 
         .logo i {
-            color: var(--bg-primary);
+            color: #3b82f6;
             font-size: 36px;
+        }
+
+        .logo svg {
+            stroke: #3b82f6;
+            width: 36px;
+            height: 36px;
         }
 
         .system-title {
@@ -394,12 +342,17 @@
             transition: var(--transition-fast);
         }
 
+        input[type="email"]:hover,
+        input[type="password"]:hover {
+            border-color: var(--border-accent);
+        }
+
         input[type="email"]:focus,
         input[type="password"]:focus {
             outline: none;
-            border-color: var(--primary-gold);
-            background: var(--bg-secondary);
-            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+            border-color: var(--innovation-blue);
+            background: var(--dark-bg);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         input::placeholder {
@@ -442,15 +395,15 @@
             content: '';
             width: 5px;
             height: 9px;
-            border: solid var(--bg-primary);
+            border: solid #0a0f1e;
             border-width: 0 2px 2px 0;
             transform: rotate(45deg) scale(0);
             transition: transform 0.2s ease;
         }
 
         .checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom {
-            background: var(--primary-gold);
-            border-color: var(--primary-gold);
+            background: var(--innovation-blue);
+            border-color: var(--innovation-blue);
         }
 
         .checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom::after {
@@ -458,7 +411,11 @@
         }
 
         .checkbox-wrapper input[type="checkbox"]:focus + .checkbox-custom {
-            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .checkbox-wrapper:hover .checkbox-custom {
+            border-color: var(--border-accent);
         }
 
         .checkbox-label {
@@ -472,15 +429,15 @@
         .submit-btn {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-gold-dark) 100%);
-            color: var(--bg-primary);
-            border: none;
+            background: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
             border-radius: var(--radius-md);
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-            box-shadow: var(--shadow-gold);
+            box-shadow: var(--shadow-sm);
             margin-top: 8px;
             position: relative;
             overflow: hidden;
@@ -493,17 +450,19 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.08), transparent);
             transition: left 0.5s;
+        }
+
+        .submit-btn:hover {
+            background: var(--bg-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            color: var(--innovation-blue);
         }
 
         .submit-btn:hover::before {
             left: 100%;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
         }
 
         .submit-btn:active {
@@ -530,9 +489,9 @@
             }
 
             #toastContainer {
-                top: 16px;
-                right: 16px;
-                left: 16px;
+                top: 20px;
+                right: 20px;
+                left: 20px;
             }
 
             .toast {
@@ -542,12 +501,6 @@
     </style>
 </head>
 <body>
-    <!-- Dark animated background -->
-    <div class="bg-animated"></div>
-
-    <!-- Gradient overlay -->
-    <div class="glass-overlay"></div>
-
     <div class="login-container">
         <div class="logo-container">
             <div class="logo">
@@ -584,6 +537,8 @@
         </div>
     </div>
 
+    <div id="toastContainer"></div>
+
     <script>
         // Toast System
         class ToastManager {
@@ -605,7 +560,6 @@
 
             show(type, title, message, duration = 5000) {
                 const toastId = `toast_${++this.counter}`;
-
                 const toast = document.createElement('div');
                 toast.className = 'toast show';
                 toast.setAttribute('role', 'alert');
@@ -613,8 +567,8 @@
 
                 const iconMap = {
                     success: 'fas fa-check-circle',
-                    error: 'fas fa-exclamation-circle',
-                    danger: 'fas fa-exclamation-circle',
+                    error: 'fas fa-times-circle',
+                    danger: 'fas fa-times-circle',
                     warning: 'fas fa-exclamation-triangle',
                     info: 'fas fa-info-circle'
                 };
@@ -629,9 +583,7 @@
                         <strong>${this.escapeHtml(title)}</strong>
                         <button type="button" class="btn-close" data-toast-id="${toastId}">×</button>
                     </div>
-                    <div class="toast-body">
-                        ${this.escapeHtml(message)}
-                    </div>
+                    <div class="toast-body">${this.escapeHtml(message)}</div>
                     ${duration > 0 ? `<div class="toast-progress ${normalizedType}"></div>` : ''}
                 `;
 

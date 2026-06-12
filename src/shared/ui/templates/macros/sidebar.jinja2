@@ -1,9 +1,10 @@
 {# URL Configuration #}
 {% set nav_urls = {
-    'dashboard': {'enabled': false, 'endpoint': 'dashboard.dashboard'},
+    'dashboard': {'enabled': true, 'endpoint': 'dashboard.dashboard_home'},
     'reports': {'enabled': false, 'endpoint': 'identification.list_reports'},
-    'criminals': {'enabled': false, 'endpoint': 'criminals.list_criminals'},
-    'missing': {'enabled': false, 'endpoint': 'missing.list_missing_persons'},
+    'records': {'enabled': true, 'endpoint': 'dashboard.dashboard_home'},
+    'criminals': {'enabled': true, 'endpoint': 'criminal.list_criminals'},
+    'missing': {'enabled': true, 'endpoint': 'missing_person.list_missing_persons'},
     'identification': {'enabled': false, 'endpoint': 'identification.identify_form'},
     'users': {'enabled': true, 'endpoint': 'user_management.list_users'},
     'logout': {'enabled': true, 'endpoint': 'auth.logout'}
@@ -19,6 +20,152 @@
 
 <style>
 /* ===========================
+   ULTRA-COMPACT SIDEBAR VARIABLES
+   =========================== */
+:root {
+    --sidebar-collapsed-width: 60px; /* Reduced from 80px to 60px */
+}
+
+/* ===========================
+   COLLAPSED SIDEBAR FIXES - ULTRA COMPACT
+   =========================== */
+
+/* Fix for collapsed sidebar hover - only change color to gold */
+.sidebar.collapsed .nav-link:hover {
+    background: transparent;
+    transform: none;
+    color: var(--primary-gold);
+}
+
+.sidebar.collapsed .nav-link:hover .icon-container {
+    background: transparent;
+}
+
+.sidebar.collapsed .nav-link:hover .icon-container i {
+    color: var(--primary-gold);
+}
+
+/* Make active state similar to hover state in collapsed mode */
+.sidebar.collapsed .nav-link.active {
+    background: transparent;
+    transform: none;
+    color: var(--primary-gold);
+}
+
+.sidebar.collapsed .nav-link.active .icon-container {
+    background: transparent;
+}
+
+.sidebar.collapsed .nav-link.active .icon-container i {
+    color: var(--primary-gold);
+}
+
+/* ===========================
+   ULTRA-COMPACT COLLAPSED STYLES
+   =========================== */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width) !important;
+}
+
+/* Logo section - ultra compact */
+.sidebar.collapsed .logo-section {
+    justify-content: center;
+    padding: 16px 0 !important;
+    min-height: 60px;
+}
+
+.sidebar.collapsed .logo-grid {
+    margin-right: 0;
+    width: 36px !important;
+    height: 36px !important;
+}
+
+.sidebar.collapsed .logo-grid i {
+    font-size: 18px !important;
+}
+
+.sidebar.collapsed .logo-section h1,
+.sidebar.collapsed .logo-version {
+    display: none;
+}
+
+/* Navigation items - ultra compact with equal spacing */
+.sidebar.collapsed .nav-menu {
+    padding: 8px 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sidebar.collapsed .nav-section {
+    display: none;
+}
+
+.sidebar.collapsed .nav-item {
+    margin: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 10px 0 !important;
+    margin: 2px 0;
+    width: 100%;
+}
+
+.sidebar.collapsed .icon-container {
+    width: 32px !important;
+    height: 32px !important;
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .icon-container i {
+    font-size: 16px !important;
+}
+
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-section-title,
+.sidebar.collapsed .notification-badge {
+    display: none;
+}
+
+/* User profile - ultra compact */
+.sidebar.collapsed .user-profile {
+    justify-content: center;
+    padding: 12px 0 !important;
+    min-height: 60px;
+    margin-top: auto;
+}
+
+.sidebar.collapsed .profile-content {
+    display: none;
+}
+
+.sidebar.collapsed .logout-btn {
+    width: 40px !important;
+    height: 40px !important;
+    display: flex;
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .logout-btn i {
+    font-size: 18px !important;
+}
+
+/* Toggle button positioning for ultra compact */
+.sidebar.collapsed .sidebar-toggle-btn {
+    right: -12px;
+    width: 24px;
+    height: 24px;
+}
+
+.sidebar.collapsed .sidebar-toggle-btn i {
+    font-size: 12px;
+}
+
+/* ===========================
    USER PROFILE FOOTER - NORMAL STATE
    =========================== */
 .user-profile {
@@ -26,7 +173,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--surface);
+    background: transparent;
     border-top: 1px solid var(--border);
     padding: 16px;
     display: flex;
@@ -140,17 +287,6 @@
     display: none;
 }
 
-.sidebar.collapsed .logout-btn {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    margin: 0 auto;
-}
-
-.sidebar.collapsed .logout-btn i {
-    font-size: 20px;
-}
-
 /* ===========================
    HOVER EFFECTS
    =========================== */
@@ -172,10 +308,12 @@
    =========================== */
 .sidebar {
     padding-bottom: 72px;
+    display: flex;
+    flex-direction: column;
 }
 
 .nav-scroll-area {
-    max-height: calc(100vh - 160px);
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding-bottom: 20px;
@@ -240,6 +378,62 @@
 }
 
 /* ===========================
+   SIDEBAR TOGGLE BUTTON (Desktop)
+   =========================== */
+.logo-section {
+    position: relative;
+}
+
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: -16px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-gold);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 101;
+    transition: var(--transition);
+    box-shadow: var(--shadow-md);
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: var(--primary-gold);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: var(--shadow-md), var(--shadow-gold-subtle);
+}
+
+.sidebar-toggle-btn i {
+    font-size: 14px;
+    color: var(--primary-gold);
+    transition: var(--transition);
+}
+
+.sidebar.collapsed .sidebar-toggle-btn i {
+    transform: rotate(180deg);
+}
+
+/* Content area adjustment for ultra compact sidebar */
+.sidebar.collapsed ~ .content-area {
+    margin-left: var(--sidebar-collapsed-width) !important;
+    width: calc(100vw - var(--sidebar-collapsed-width)) !important;
+}
+
+/* Hide toggle on mobile */
+@media (max-width: 768px) {
+    .sidebar-toggle-btn {
+        display: none;
+    }
+}
+
+/* ===========================
    MOBILE RESPONSIVE
    =========================== */
 @media (max-width: 768px) {
@@ -268,6 +462,12 @@
 
     .logout-btn i {
         font-size: 16px;
+    }
+
+    /* Reset ultra compact for mobile */
+    .sidebar.collapsed ~ .content-area {
+        margin-left: 0 !important;
+        width: 100vw !important;
     }
 }
 
@@ -304,6 +504,11 @@
             <i class="fas fa-shield-alt"></i>
         </div>
         <h1>Sentinel <span class="logo-version">v1.0</span></h1>
+
+        <!-- Desktop Toggle Button - MOVED INSIDE LOGO SECTION -->
+        <button class="sidebar-toggle-btn" onclick="toggleSidebar()">
+            <i class="fas fa-chevron-left"></i>
+        </button>
     </div>
 
     <!-- Scrollable Navigation Area -->
@@ -315,7 +520,7 @@
             </li>
 
             <li class="nav-item">
-                <a href="{{ get_url('dashboard') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.dashboard') %}active{% endif %}">
+                <a href="{{ get_url('dashboard') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.') %}active{% endif %}">
                     <div class="icon-container">
                         <i class="fas fa-home"></i>
                     </div>
@@ -338,26 +543,12 @@
             </li>
 
             <li class="nav-item">
-                <a href="{{ get_url('criminals') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('criminals') and not request.endpoint.startswith('criminals.list_reports') %}active{% endif %}">
+                <a href="{{ get_url('records') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.') %}active{% endif %}">
                     <div class="icon-container">
-                        <i class="fas fa-user-slash"></i>
+                        <i class="fas fa-database"></i>
                     </div>
-                    <span class="nav-text">Criminals</span>
+                    <span class="nav-text">Registry</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ get_url('missing') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('missing') and not request.endpoint.startswith('missing.list_reports') %}active{% endif %}">
-                    <div class="icon-container">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <span class="nav-text">Missing Persons</span>
-                </a>
-            </li>
-
-            <!-- Identification Section -->
-            <li class="nav-section">
-                <div class="nav-section-title">Identification</div>
             </li>
 
             <li class="nav-item">
@@ -438,6 +629,25 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebar.classList.remove('active');
             sidebarOverlay.classList.remove('active');
         });
+    }
+});
+
+// Desktop sidebar toggle
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('collapsed');
+
+    // Save state to localStorage
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+}
+
+// Restore sidebar state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+    if (sidebarCollapsed && window.innerWidth > 768) {
+        sidebar.classList.add('collapsed');
     }
 });
 </script>
