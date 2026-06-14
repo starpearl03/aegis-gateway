@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 import re
-from src.modules.records.domain.models.enums import (
-    MissingPersonStatus, CrimeStatus, PunishmentType,
-    PunishmentStatus, ThreatLevel, EvidenceType, Gender
-)
 from src.shared.configs.exceptions.exceptions import ValidationException
 
 
@@ -405,10 +401,12 @@ class MissingPersonResponse:
     gender: Optional[str]
     phone_number: Optional[str]
     email: Optional[str]
+    national_id: Optional[str]
     height: Optional[float]
     weight: Optional[float]
     hair_color: Optional[str]
     eye_color: Optional[str]
+    skin_tone: Optional[str]
     distinctive_features: Optional[str]
     status: str
     last_seen_date: str
@@ -432,10 +430,12 @@ class MissingPersonResponse:
             'gender': self.gender,
             'phone_number': self.phone_number,
             'email': self.email,
+            'national_id': self.national_id,
             'height': self.height,
             'weight': self.weight,
             'hair_color': self.hair_color,
             'eye_color': self.eye_color,
+            'skin_tone': self.skin_tone,
             'distinctive_features': self.distinctive_features,
             'status': self.status,
             'last_seen_date': self.last_seen_date,
@@ -652,6 +652,8 @@ class CriminalResponse:
     date_of_birth: Optional[str]
     gender: Optional[str]
     national_id: Optional[str]
+    phone_number: Optional[str]
+    email: Optional[str]
     alias: Optional[str]
     is_wanted: bool
     priority_level: int
@@ -661,7 +663,10 @@ class CriminalResponse:
     weight: Optional[float]
     hair_color: Optional[str]
     eye_color: Optional[str]
+    skin_tone: Optional[str]
     distinctive_features: Optional[str]
+    description: Optional[str]
+    primary_image: Optional[str]
     created_at: str
     updated_at: str
 
@@ -674,6 +679,8 @@ class CriminalResponse:
             'date_of_birth': self.date_of_birth,
             'gender': self.gender,
             'national_id': self.national_id,
+            'phone_number': self.phone_number,
+            'email': self.email,
             'alias': self.alias,
             'is_wanted': self.is_wanted,
             'priority_level': self.priority_level,
@@ -683,7 +690,10 @@ class CriminalResponse:
             'weight': self.weight,
             'hair_color': self.hair_color,
             'eye_color': self.eye_color,
+            'skin_tone': self.skin_tone,
             'distinctive_features': self.distinctive_features,
+            'description': self.description,
+            'primary_image': self.primary_image,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
@@ -860,7 +870,7 @@ class CrimeResponse:
 class AddCrimeVictimRequest:
     """DTO for adding a victim to a crime."""
     crime_id: str
-    person_id: str
+    full_name: str  # Changed from person_id
     injury_description: Optional[str] = None
     medical_report_path: Optional[str] = None
     recorded_by: Optional[str] = None
@@ -869,14 +879,16 @@ class AddCrimeVictimRequest:
         """Validate victim data."""
         if not self.crime_id:
             raise ValidationException("Crime ID is required")
-        if not self.person_id:
-            raise ValidationException("Person ID is required")
+        if not self.full_name or not self.full_name.strip():
+            raise ValidationException("Victim full name is required")
+        if len(self.full_name.strip()) < 2:
+            raise ValidationException("Victim full name must be at least 2 characters long")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
             'crime_id': self.crime_id,
-            'person_id': self.person_id,
+            'full_name': self.full_name,
             'injury_description': self.injury_description,
             'medical_report_path': self.medical_report_path,
             'recorded_by': self.recorded_by
@@ -888,7 +900,7 @@ class CrimeVictimResponse:
     """DTO for crime victim response."""
     id: str
     crime_id: str
-    person_id: str
+    full_name: str  # Changed from person_id
     injury_description: Optional[str]
     medical_report_path: Optional[str]
     created_at: str
@@ -899,7 +911,7 @@ class CrimeVictimResponse:
         return {
             'id': self.id,
             'crime_id': self.crime_id,
-            'person_id': self.person_id,
+            'full_name': self.full_name,
             'injury_description': self.injury_description,
             'medical_report_path': self.medical_report_path,
             'created_at': self.created_at,
@@ -994,10 +1006,26 @@ class CreatePunishmentRequest:
         if not self.status:
             raise ValidationException("Punishment status is required")
 
-        # Validate fine amount if type is FINE
-        if self.type == PunishmentType.FINE.value:
+        # Validate that type and status are valid enum values (lowercase check)
+        valid_types = ['jail', 'prison', 'fine', 'probation', 'community_service',
+                      'suspended_sentence', 'acquitted', 'death_penalty']
+        if self.type not in valid_types:
+            raise ValidationException(f"Invalid punishment type: {self.type}. Must be one of: {', '.join(valid_types)}")
+
+        valid_statuses = ['pending', 'active', 'completed', 'suspended',
+                         'revoked', 'overdue', 'partially_paid']
+        if self.status not in valid_statuses:
+            raise ValidationException(f"Invalid status: {self.status}. Must be one of: {', '.join(valid_statuses)}")
+
+        # Validate fine amount if type is fine
+        if self.type == 'fine':
             if self.amount is None or self.amount <= 0:
-                raise ValidationException("Fine amount must be greater than 0")
+                raise ValidationException("Fine requires a valid amount greater than 0")
+
+        # Validate duration for time-based punishments
+        if self.type in ['jail', 'prison', 'community_service', 'probation']:
+            if self.duration is None or self.duration <= 0:
+                raise ValidationException(f"{self.type.replace('_', ' ').title()} requires a valid duration greater than 0")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
