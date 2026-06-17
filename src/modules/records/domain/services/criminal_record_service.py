@@ -205,6 +205,7 @@ class CriminalRecordService:
             total_pages=(total + request.per_page - 1) // request.per_page
         )
 
+
     def get_wanted_criminals(self) -> List[CriminalResponse]:
         """
         Get all wanted criminals.
@@ -237,6 +238,7 @@ class CriminalRecordService:
             message="Criminal record deleted successfully",
             id=criminal_id
         )
+
 
     # ========================================================================
     # CRIME MANAGEMENT
@@ -311,7 +313,7 @@ class CriminalRecordService:
 
         try:
             if request.status is not None:
-                crime.status = CrimeStatus[request.status]
+                crime.status = self._get_enum_by_value(CrimeStatus, request.status)
             if request.assigned_officer_id is not None:
                 crime.assigned_officer_id = request.assigned_officer_id
             if request.description is not None:
@@ -322,8 +324,6 @@ class CriminalRecordService:
             updated_crime = self.crime_repo.update(crime)
             return self._build_crime_response(updated_crime)
 
-        except KeyError:
-            raise ValidationException(f"Invalid status: {request.status}")
         except Exception as e:
             raise ValidationException(f"Failed to update crime: {str(e)}")
 
@@ -358,11 +358,8 @@ class CriminalRecordService:
         """
         # Build query based on filters
         if request.status:
-            try:
-                status = CrimeStatus[request.status]
-                crimes = self.crime_repo.find_by_status(status)
-            except KeyError:
-                raise ValidationException(f"Invalid status: {request.status}")
+            status = self._get_enum_by_value(CrimeStatus, request.status)
+            crimes = self.crime_repo.find_by_status(status)
         elif request.crime_type:
             crimes = self.crime_repo.find_by_crime_type(request.crime_type)
         elif request.criminal_id:
@@ -448,6 +445,7 @@ class CriminalRecordService:
             id=crime_id
         )
 
+
     # ========================================================================
     # CRIME VICTIM MANAGEMENT
     # ========================================================================
@@ -463,29 +461,18 @@ class CriminalRecordService:
             CrimeVictimResponse DTO
 
         Raises:
-            NotFoundException: If crime or person not found
-            AlreadyExistsException: If person is already a victim of this crime
+            NotFoundException: If crime not found
+            ValidationException: If validation fails
         """
         # Verify crime exists
         crime = self.crime_repo.find_by_id(request.crime_id)
         if not crime:
             raise NotFoundException(f"Crime with ID {request.crime_id} not found")
 
-        # Verify person exists
-        person = self.person_repo.find_by_id(request.person_id)
-        if not person:
-            raise NotFoundException(f"Person with ID {request.person_id} not found")
-
-        # Check if already a victim
-        if self.victim_repo.is_victim(request.crime_id, request.person_id):
-            raise AlreadyExistsException(
-                f"Person {request.person_id} is already a victim of crime {request.crime_id}"
-            )
-
         try:
             victim = CrimeVictim(
                 crime_id=request.crime_id,
-                person_id=request.person_id,
+                full_name=request.full_name.strip(),
                 injury_description=request.injury_description,
                 medical_report_path=request.medical_report_path,
                 recorded_by=request.recorded_by
@@ -545,10 +532,14 @@ class CriminalRecordService:
             self.location_utils.get_location_by_id(request.location_id)
 
         try:
+            # Convert string values to enums using helper method
+            punishment_type = self._get_enum_by_value(PunishmentType, request.type)
+            punishment_status = self._get_enum_by_value(PunishmentStatus, request.status)
+
             punishment = Punishment(
                 crime_id=request.crime_id,
-                type=PunishmentType[request.type],
-                status=PunishmentStatus[request.status],
+                type=punishment_type,
+                status=punishment_status,
                 start_date=datetime.fromisoformat(request.start_date) if request.start_date else None,
                 end_date=datetime.fromisoformat(request.end_date) if request.end_date else None,
                 amount=request.amount,
@@ -561,8 +552,6 @@ class CriminalRecordService:
             saved_punishment = self.punishment_repo.create(punishment)
             return self._build_punishment_response(saved_punishment)
 
-        except KeyError as e:
-            raise ValidationException(f"Invalid enum value: {str(e)}")
         except Exception as e:
             raise ValidationException(f"Failed to create punishment: {str(e)}")
 
@@ -586,7 +575,8 @@ class CriminalRecordService:
 
         try:
             if request.status is not None:
-                punishment.status = PunishmentStatus[request.status]
+                # Convert string to enum by value using helper method
+                punishment.status = self._get_enum_by_value(PunishmentStatus, request.status)
             if request.amount_paid is not None:
                 punishment.amount_paid = request.amount_paid
             if request.end_date is not None:
@@ -599,8 +589,6 @@ class CriminalRecordService:
             updated_punishment = self.punishment_repo.update(punishment)
             return self._build_punishment_response(updated_punishment)
 
-        except KeyError:
-            raise ValidationException(f"Invalid status: {request.status}")
         except Exception as e:
             raise ValidationException(f"Failed to update punishment: {str(e)}")
 
@@ -618,17 +606,11 @@ class CriminalRecordService:
         if request.crime_id:
             punishments = self.punishment_repo.find_by_crime(request.crime_id)
         elif request.type:
-            try:
-                pun_type = PunishmentType[request.type]
-                punishments = self.punishment_repo.find_by_type(pun_type)
-            except KeyError:
-                raise ValidationException(f"Invalid type: {request.type}")
+            pun_type = self._get_enum_by_value(PunishmentType, request.type)
+            punishments = self.punishment_repo.find_by_type(pun_type)
         elif request.status:
-            try:
-                status = PunishmentStatus[request.status]
-                punishments = self.punishment_repo.find_by_status(status)
-            except KeyError:
-                raise ValidationException(f"Invalid status: {request.status}")
+            status = self._get_enum_by_value(PunishmentStatus, request.status)
+            punishments = self.punishment_repo.find_by_status(status)
         else:
             punishments = self.punishment_repo.find_all(include_deleted=request.include_deleted)
 
@@ -838,24 +820,43 @@ class CriminalRecordService:
     # ========================================================================
 
     def _build_criminal_response(self, criminal: Criminal) -> CriminalResponse:
-        """Build CriminalResponse DTO from entity."""
+        """
+        Helper method to build CriminalResponse from entity.
+
+        Args:
+            criminal: Criminal entity
+
+        Returns:
+            CriminalResponse DTO
+        """
+        # Get primary image
+        primary_image = None
+        primary_image_obj = criminal.images.filter_by(is_primary=True).first()
+        if primary_image_obj:
+            primary_image = primary_image_obj.image_path
+
         return CriminalResponse(
             id=criminal.id,
             first_name=criminal.first_name,
             last_name=criminal.last_name,
             date_of_birth=criminal.date_of_birth.isoformat() if criminal.date_of_birth else None,
-            gender=criminal.gender,
+            gender=criminal.gender.value if criminal.gender else None,
             national_id=criminal.national_id,
+            phone_number=criminal.phone_number,
+            email=criminal.email,
             alias=criminal.alias,
             is_wanted=criminal.is_wanted,
             priority_level=criminal.priority_level,
             gang_affiliation=criminal.gang_affiliation,
-            threat_level=criminal.threat_level,
+            threat_level=criminal.threat_level.value if criminal.threat_level else None,
             height=criminal.height,
             weight=criminal.weight,
             hair_color=criminal.hair_color,
             eye_color=criminal.eye_color,
+            skin_tone=criminal.skin_tone,
             distinctive_features=criminal.distinctive_features,
+            description=criminal.description,
+            primary_image=primary_image,
             created_at=criminal.created_at.isoformat(),
             updated_at=criminal.updated_at.isoformat()
         )
@@ -891,7 +892,7 @@ class CriminalRecordService:
         return CrimeVictimResponse(
             id=victim.id,
             crime_id=victim.crime_id,
-            person_id=victim.person_id,
+            full_name=victim.full_name,
             injury_description=victim.injury_description,
             medical_report_path=victim.medical_report_path,
             created_at=victim.created_at.isoformat(),
@@ -931,11 +932,45 @@ class CriminalRecordService:
             id=evidence.id,
             crime_id=evidence.crime_id,
             description=evidence.description,
-            type=evidence.type,
+            type=evidence.type.value,
             file_path=evidence.file_path,
             collected_by=evidence.collected_by,
             collected_date=evidence.collected_date.isoformat() if evidence.collected_date else None,
             storage_location=evidence.storage_location,
             created_at=evidence.created_at.isoformat(),
             updated_at=evidence.updated_at.isoformat()
+        )
+
+    # ========================================================================
+    # HELPER METHOD FOR ENUM CONVERSION
+    # ========================================================================
+
+    @staticmethod
+    def _get_enum_by_value(enum_class, value: str):
+        """
+        Get enum member by its value (case-insensitive).
+
+        Args:
+            enum_class: The enum class to search
+            value: The string value to find
+
+        Returns:
+            The matching enum member
+
+        Raises:
+            ValidationException: If no matching enum member is found
+        """
+        if not value:
+            raise ValidationException(f"Value cannot be empty for {enum_class.__name__}")
+
+        value_lower = value.lower().strip()
+        for member in enum_class:
+            if member.value.lower() == value_lower:
+                return member
+
+        # Build helpful error message with valid options
+        valid_values = [member.value for member in enum_class]
+        raise ValidationException(
+            f"Invalid {enum_class.__name__} value: '{value}'. "
+            f"Valid options are: {', '.join(valid_values)}"
         )

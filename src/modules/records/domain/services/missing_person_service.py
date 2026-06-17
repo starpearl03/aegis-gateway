@@ -2,7 +2,7 @@
 from typing import List, Dict, Any
 from datetime import datetime
 
-from src.modules.records.domain.models.enums import MissingPersonStatus
+from src.modules.records.domain.models.enums import MissingPersonStatus, RelationshipType
 from src.modules.records.domain.models.missing_person import MissingPerson
 from src.modules.records.domain.models.reporter import Reporter
 from src.modules.records.domain.repositories.missing_person_repository import MissingPersonRepository
@@ -82,11 +82,11 @@ class MissingPersonService:
             # Save missing person
             saved_missing_person = self.missing_person_repo.create(missing_person)
 
-            # Create reporter entity
+            # Create reporter entity with proper enum conversion
             reporter = Reporter(
                 first_name=request.reporter_first_name,
                 last_name=request.reporter_last_name,
-                relationship=request.reporter_relationship,
+                relationship=RelationshipType[request.reporter_relationship.upper()],
                 phone_number=request.reporter_phone,
                 email=request.reporter_email,
                 address_id=request.reporter_address_id,
@@ -467,7 +467,7 @@ class MissingPersonService:
                 'id': reporter.id,
                 'first_name': reporter.first_name,
                 'last_name': reporter.last_name,
-                'relationship': reporter.relationship,
+                'relationship': reporter.relationship.value,
                 'phone_number': reporter.phone_number,
                 'email': reporter.email
             }
@@ -477,13 +477,15 @@ class MissingPersonService:
             first_name=missing_person.first_name,
             last_name=missing_person.last_name,
             date_of_birth=missing_person.date_of_birth.isoformat() if missing_person.date_of_birth else None,
-            gender=missing_person.gender,
+            gender=missing_person.gender.value if missing_person.gender else None,
             phone_number=missing_person.phone_number,
             email=missing_person.email,
+            national_id=missing_person.national_id, 
             height=missing_person.height,
             weight=missing_person.weight,
             hair_color=missing_person.hair_color,
             eye_color=missing_person.eye_color,
+            skin_tone=missing_person.skin_tone,
             distinctive_features=missing_person.distinctive_features,
             status=missing_person.status.value,
             last_seen_date=missing_person.last_seen_date.isoformat(),
