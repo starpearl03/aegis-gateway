@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from src.config.factory import create_app
 from src.modules.authentication.presentation.controller.auth_controller import auth_bp
 from src.modules.authentication.presentation.controller.user_management_controller import user_management_bp
+from src.modules.records.presentation.controllers.criminal_controller import criminal_bp
+from src.modules.records.presentation.controllers.dashboard_controller import dashboard_bp
+from src.modules.records.presentation.controllers.missing_person_controller import missing_person_bp
 
 
 def load_environment():
@@ -60,7 +63,8 @@ def create_application():
             server,
             database,
             integrations,
-            logging
+            logging,
+            uploads
         )
 
         configs = {
@@ -70,6 +74,7 @@ def create_application():
             "database": database,
             "integrations": integrations,
             "logging": logging,
+            "uploads": uploads
         }
 
         print("✅ Loaded configs:", list(configs.keys()))
@@ -84,7 +89,8 @@ def create_application():
     error_handlers = []
 
     # Blueprints
-    blueprints = [user_management_bp, auth_bp]
+    blueprints = [user_management_bp, auth_bp,
+                  dashboard_bp, criminal_bp, missing_person_bp]
 
 
     try:
