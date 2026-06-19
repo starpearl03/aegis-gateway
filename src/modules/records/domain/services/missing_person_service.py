@@ -480,7 +480,7 @@ class MissingPersonService:
             gender=missing_person.gender.value if missing_person.gender else None,
             phone_number=missing_person.phone_number,
             email=missing_person.email,
-            national_id=missing_person.national_id, 
+            national_id=missing_person.national_id,
             height=missing_person.height,
             weight=missing_person.weight,
             hair_color=missing_person.hair_color,
