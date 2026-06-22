@@ -1,0 +1,957 @@
+{% extends 'base.jinja2' %}
+
+{% set persons = missing_persons if missing_persons else [] %}
+{% set total = pagination.total if pagination and pagination.total else 0 %}
+{% set page = pagination.page if pagination and pagination.page else 1 %}
+{% set per_page = pagination.per_page if pagination and pagination.per_page else 20 %}
+{% set total_pages = pagination.total_pages if pagination and pagination.total_pages else 1 %}
+{% set current_status = filters.status if filters and filters.status else '' %}
+{% set current_officer = filters.assigned_officer_id if filters and filters.assigned_officer_id else '' %}
+{% set include_deleted = filters.include_deleted if filters and filters.include_deleted else false %}
+
+{% block title %}Missing Persons | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    height: 100%;
+}
+
+/* ===========================
+   BREADCRUMB & HEADER - MATCHING STYLE
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-bottom: 8px;
+}
+
+.header-content {
+    flex: 1;
+    min-width: 280px;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.header-icon {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.header-icon i {
+    font-size: 26px;
+    color: var(--error);
+}
+
+.header-text h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.header-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 6px 0 0 0;
+    line-height: 1.5;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ===========================
+   STATS CARDS - TRANSPARENT
+   =========================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--error), #dc2626);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--error);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+/* ===========================
+   CONTENT CARD - TRANSPARENT
+   =========================== */
+.content-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: transparent;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-select {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    min-width: 140px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.filter-select:hover {
+    border-color: var(--error);
+}
+
+/* ===========================
+   PERSONS GRID - TRANSPARENT CARDS
+   =========================== */
+.persons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.person-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.person-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--error);
+}
+
+.person-header {
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border);
+}
+
+.person-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--error);
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.person-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+.person-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.person-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.person-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-item {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.meta-item i {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.person-body {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.last-seen {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--error);
+}
+
+.last-seen i {
+    font-size: 16px;
+    color: var(--error);
+}
+
+.last-seen-info {
+    flex: 1;
+}
+
+.last-seen-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.last-seen-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    margin-top: 2px;
+}
+
+.person-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.missing {
+    background: var(--error-bg);
+    color: var(--error);
+}
+
+.status-badge.found {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.status-badge.deceased {
+    background: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.action-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.action-btn.view:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+    border-color: var(--info);
+}
+
+.action-btn.edit:hover {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+.action-btn.delete:hover {
+    background: var(--error-bg);
+    color: var(--error);
+    border-color: var(--error);
+}
+
+.action-btn i {
+    font-size: 14px;
+}
+
+/* ===========================
+   EMPTY STATE
+   =========================== */
+.empty-state {
+    text-align: center;
+    padding: 80px 40px;
+    grid-column: 1 / -1;
+}
+
+.empty-state i {
+    font-size: 64px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+/* ===========================
+   PAGINATION - TRANSPARENT
+   =========================== */
+.pagination {
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    background: transparent;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.pagination-btn {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    min-width: 36px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-btn:hover:not(:disabled):not(.disabled) {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.pagination-btn:disabled,
+.pagination-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.pagination-btn.active {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    color: white;
+    border-color: var(--error);
+    font-weight: 600;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--error);
+    color: var(--text-primary);
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 1200px) {
+    .persons-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filters {
+        width: 100%;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .persons-grid {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>Missing Persons</span>
+        </span>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-icon">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <div class="header-text">
+                    <h1>Missing Persons</h1>
+                    <p>Track and manage missing person cases</p>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('missing_person.missing_person_form') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i>
+                Report Missing Person
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-body">
+                <div class="stat-label">Total Cases</div>
+                <div class="stat-value">{{ total }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-body">
+                <div class="stat-label">Active Cases</div>
+                <div class="stat-value">{{ persons|selectattr('status', 'equalto', 'MISSING')|list|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-body">
+                <div class="stat-label">Found</div>
+                <div class="stat-value">{{ persons|selectattr('status', 'equalto', 'FOUND')|list|length }}</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-body">
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">{{ persons|length if persons else 0 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Card -->
+    <div class="content-card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-list"></i>
+                All Cases ({{ total }})
+            </h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="filter-label">Status</label>
+                    <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+                        <option value="">All Status</option>
+                        <option value="MISSING" {% if current_status == 'MISSING' %}selected{% endif %}>Missing</option>
+                        <option value="FOUND" {% if current_status == 'FOUND' %}selected{% endif %}>Found</option>
+                        <option value="DECEASED" {% if current_status == 'DECEASED' %}selected{% endif %}>Deceased</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">View</label>
+                    <select class="filter-select" id="deletedFilter" onchange="applyFilters()">
+                        <option value="false" {% if not include_deleted %}selected{% endif %}>Active Only</option>
+                        <option value="true" {% if include_deleted %}selected{% endif %}>Include Deleted</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="persons-grid">
+            {% if persons and persons|length > 0 %}
+                {% for person in persons %}
+                <div class="person-card" onclick="window.location.href='{{ url_for('missing_person.view_missing_person', missing_person_id=person.id) }}'">
+                    <div class="person-header">
+                        <div class="person-avatar">
+                            {% if person.primary_image %}
+                                 <img src="{{ url_for('uploads', filename=person.primary_image|image_url) }}" alt="{{ person.first_name }} {{ person.last_name }}">
+                            {% else %}
+                                {{ person.first_name[0] }}{{ person.last_name[0] }}
+                            {% endif %}
+                        </div>
+                        <div class="person-info">
+                            <h3 class="person-name">{{ person.first_name }} {{ person.last_name }}</h3>
+                            <div class="person-meta">
+                                {% if person.age %}
+                                <div class="meta-item">
+                                    <i class="fas fa-birthday-cake"></i>
+                                    <span>{{ person.age }} years old</span>
+                                </div>
+                                {% endif %}
+                                {% if person.gender %}
+                                <div class="meta-item">
+                                    <i class="fas fa-venus-mars"></i>
+                                    <span>{{ person.gender }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="person-body">
+                        {% if person.last_seen_date and person.last_seen_location %}
+                        <div class="last-seen">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div class="last-seen-info">
+                                <div class="last-seen-label">Last Seen</div>
+                                <div class="last-seen-value">
+                                    {{ person.last_seen_date[:10] if person.last_seen_date else 'Unknown' }}
+                                    {% if person.last_seen_location and person.last_seen_location.city %}
+                                        - {{ person.last_seen_location.city }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if person.circumstances %}
+                        <div class="info-section">
+                            <div class="info-label">Circumstances</div>
+                            <div class="info-value">
+                                {{ person.circumstances[:120] }}{% if person.circumstances|length > 120 %}...{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if person.distinctive_features %}
+                        <div class="info-section">
+                            <div class="info-label">Distinctive Features</div>
+                            <div class="info-value">{{ person.distinctive_features }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="person-footer">
+                        <span class="status-badge {{ person.status|lower if person.status else 'missing' }}">
+                            {{ person.status if person.status else 'MISSING' }}
+                        </span>
+                        <div class="action-buttons">
+                            <button class="action-btn view" onclick="event.stopPropagation(); window.location.href='{{ url_for('missing_person.view_missing_person', missing_person_id=person.id) }}'" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn edit" onclick="event.stopPropagation(); window.location.href='{{ url_for('missing_person.missing_person_form', missing_person_id=person.id) }}'" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete" onclick="event.stopPropagation(); deletePerson('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}')" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-user-slash"></i>
+                    <h3>No Missing Persons Found</h3>
+                    <p>There are no missing person cases matching your criteria.</p>
+                    <a href="{{ url_for('missing_person.missing_person_form') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i>
+                        Report First Case
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if persons and persons|length > 0 and pagination %}
+        <div class="pagination">
+            <div class="pagination-info">
+                {% set start = ((page - 1) * per_page) + 1 %}
+                {% set calculated_end = page * per_page %}
+                {% set end = calculated_end if calculated_end < total else total %}
+                Showing {{ start }} to {{ end }} of {{ total }} cases
+            </div>
+            <div class="pagination-controls">
+                <a href="{{ url_for('missing_person.list_missing_persons', page=1, per_page=per_page, status=current_status, include_deleted=include_deleted) }}"
+                   class="pagination-btn {% if page <= 1 %}disabled{% endif %}"
+                   {% if page <= 1 %}onclick="return false;"{% endif %}>
+                    First
+                </a>
+                <a href="{{ url_for('missing_person.list_missing_persons', page=page-1, per_page=per_page, status=current_status, include_deleted=include_deleted) }}"
+                   class="pagination-btn {% if page <= 1 %}disabled{% endif %}"
+                   {% if page <= 1 %}onclick="return false;"{% endif %}>
+                    Previous
+                </a>
+
+                {% set start_page = page - 2 if page - 2 > 1 else 1 %}
+                {% set end_page = page + 2 if page + 2 < total_pages else total_pages %}
+                {% set current_page = page %}
+                {% set next_page = current_page + 1 %}
+
+                {% for page_num in range(start_page, end_page + 1) %}
+                <a href="{{ url_for('missing_person.list_missing_persons', page=page_num, per_page=per_page, status=current_status, include_deleted=include_deleted) }}"
+                   class="pagination-btn {% if page_num == current_page %}active{% endif %}">
+                    {{ page_num }}
+                </a>
+                {% endfor %}
+
+                <a href="{{ url_for('missing_person.list_missing_persons', page=next_page, per_page=per_page, status=current_status, include_deleted=include_deleted) }}"
+                   class="pagination-btn {% if current_page >= total_pages %}disabled{% endif %}"
+                   {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
+                    Next
+                </a>
+                <a href="{{ url_for('missing_person.list_missing_persons', page=total_pages, per_page=per_page, status=current_status, include_deleted=include_deleted) }}"
+                   class="pagination-btn {% if current_page >= total_pages %}disabled{% endif %}"
+                   {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
+                    Last
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Filter Functions
+    function applyFilters() {
+        const status = document.getElementById('statusFilter').value;
+        const deleted = document.getElementById('deletedFilter').value;
+
+        const params = new URLSearchParams(window.location.search);
+
+        if (status) {
+            params.set('status', status);
+        } else {
+            params.delete('status');
+        }
+
+        params.set('include_deleted', deleted);
+        params.set('page', '1'); // Reset to first page
+
+        window.location.search = params.toString();
+    }
+
+    // Delete Person
+    async function deletePerson(personId, personName) {
+        if (!confirm(`Are you sure you want to delete the case for "${personName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ url_for('missing_person.list_missing_persons') }}/${personId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                if (window.toast) {
+                    window.toast.error('Error', data.message || 'Failed to delete case');
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.success('Success', data.message || 'Case deleted successfully');
+                }
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            if (window.toast) {
+                window.toast.error('Error', 'Failed to delete case');
+            }
+        }
+    }
+</script>
+{% endblock %}

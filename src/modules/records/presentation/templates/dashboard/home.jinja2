@@ -1,0 +1,806 @@
+{% extends 'base.jinja2' %}
+
+{% set stats = statistics if statistics else {} %}
+{% set missing_persons = stats.missing_persons if stats.missing_persons else {'total': 0, 'active_cases': 0} %}
+{% set criminals = stats.criminals if stats.criminals else {'total': 0, 'wanted': 0} %}
+{% set crimes = stats.crimes if stats.crimes else {'total': 0, 'open': 0, 'solved': 0} %}
+{% set punishments = stats.punishments if stats.punishments else {'total': 0, 'active': 0} %}
+
+{% block title %}Dashboard | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   DASHBOARD LAYOUT
+   =========================== */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB - MATCHING STYLE
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   WELCOME SECTION - TRANSPARENT
+   =========================== */
+.welcome-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 1;
+}
+
+.welcome-greeting {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.welcome-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.welcome-subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 600px;
+}
+
+/* ===========================
+   STATS GRID - TRANSPARENT
+   =========================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-gold), var(--primary-gold-light));
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-gold);
+}
+
+.stat-card:hover::before {
+    opacity: 1;
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+.stat-icon::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(135deg, transparent, rgba(212, 175, 55, 0.3));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.stat-card:hover .stat-icon::after {
+    opacity: 1;
+}
+
+.stat-icon.missing {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+}
+
+.stat-icon.criminals {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.stat-icon.crimes {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
+.stat-icon.punishments {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.stat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 12px;
+}
+
+.stat-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+    border: 1px solid var(--border);
+}
+
+.stat-detail-item:hover {
+    background: rgba(10, 14, 39, 0.6);
+}
+
+.stat-detail-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stat-detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ===========================
+   QUICK ACTIONS - TRANSPARENT
+   =========================== */
+.quick-actions {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.section-icon i {
+    font-size: 18px;
+    color: var(--bg-primary);
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.action-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), transparent);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.action-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-gold);
+}
+
+.action-card:hover::before {
+    opacity: 1;
+}
+
+.action-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: var(--transition);
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--border);
+}
+
+.action-card:hover .action-icon {
+    transform: scale(1.1);
+}
+
+.action-icon.missing {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+}
+
+.action-icon.criminals {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.action-icon.crimes {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
+.action-icon.punishments {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.action-icon.locations {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+}
+
+.action-icon.search {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--primary-gold);
+}
+
+.action-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===========================
+   RECENT ACTIVITY & INSIGHTS - TRANSPARENT
+   =========================== */
+.dashboard-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.insights-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+}
+
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.insight-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+}
+
+.insight-item:hover {
+    background: rgba(10, 14, 39, 0.5);
+    transform: translateX(4px);
+}
+
+.insight-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.insight-icon.success {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.insight-icon.warning {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.insight-icon.info {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
+.insight-content {
+    flex: 1;
+}
+
+.insight-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.insight-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .dashboard-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        gap: 20px;
+    }
+
+    .welcome-section {
+        padding: 24px;
+    }
+
+    .welcome-title {
+        font-size: 28px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .action-card {
+        padding: 20px 16px;
+    }
+
+    .quick-actions,
+    .insights-card {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-bottom {
+        gap: 16px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item active">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+    </div>
+
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <div class="welcome-content">
+            <div class="welcome-greeting">Welcome Back</div>
+            <h1 class="welcome-title">Dashboard Overview</h1>
+            <p class="welcome-subtitle">
+                Monitor real-time statistics, manage records, and stay informed about critical cases across the system.
+            </p>
+        </div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+        <!-- Missing Persons Card -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon missing">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+            </div>
+            <div class="stat-body">
+                <div class="stat-label">Missing Persons</div>
+                <div class="stat-value">{{ missing_persons.total }}</div>
+                <div class="stat-details">
+                    <div class="stat-detail-item">
+                        <span class="stat-detail-label">Active Cases</span>
+                        <span class="stat-detail-value">{{ missing_persons.active_cases }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Criminals Card -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon criminals">
+                    <i class="fas fa-user-secret"></i>
+                </div>
+            </div>
+            <div class="stat-body">
+                <div class="stat-label">Criminals</div>
+                <div class="stat-value">{{ criminals.total }}</div>
+                <div class="stat-details">
+                    <div class="stat-detail-item">
+                        <span class="stat-detail-label">Wanted</span>
+                        <span class="stat-detail-value">{{ criminals.wanted }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crimes Card -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon crimes">
+                    <i class="fas fa-gavel"></i>
+                </div>
+            </div>
+            <div class="stat-body">
+                <div class="stat-label">Crime Cases</div>
+                <div class="stat-value">{{ crimes.total }}</div>
+                <div class="stat-details">
+                    <div class="stat-detail-item">
+                        <span class="stat-detail-label">Open</span>
+                        <span class="stat-detail-value">{{ crimes.open }}</span>
+                    </div>
+                    <div class="stat-detail-item">
+                        <span class="stat-detail-label">Solved</span>
+                        <span class="stat-detail-value">{{ crimes.solved }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Punishments Card -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon punishments">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+            </div>
+            <div class="stat-body">
+                <div class="stat-label">Punishments</div>
+                <div class="stat-value">{{ punishments.total }}</div>
+                <div class="stat-details">
+                    <div class="stat-detail-item">
+                        <span class="stat-detail-label">Active</span>
+                        <span class="stat-detail-value">{{ punishments.active }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <div class="section-header">
+            <div class="section-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h2 class="section-title">Quick Actions</h2>
+        </div>
+        <div class="actions-grid">
+            <a href="{{ url_for('missing_person.list_missing_persons') }}" class="action-card">
+                <div class="action-icon missing">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <span class="action-label">Missing Persons</span>
+            </a>
+
+            <a href="{{ url_for('criminal.list_criminals') if url_for('criminal.list_criminals') else '#' }}" class="action-card">
+                <div class="action-icon criminals">
+                    <i class="fas fa-user-secret"></i>
+                </div>
+                <span class="action-label">Criminals</span>
+            </a>
+
+            <a href="#" class="action-card">
+                <div class="action-icon crimes">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <span class="action-label">Crime Cases</span>
+            </a>
+
+            <a href="#" class="action-card">
+                <div class="action-icon punishments">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <span class="action-label">Punishments</span>
+            </a>
+
+            <a href="#" class="action-card">
+                <div class="action-icon locations">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <span class="action-label">Locations</span>
+            </a>
+
+            <a href="#" class="action-card">
+                <div class="action-icon search">
+                    <i class="fas fa-search"></i>
+                </div>
+                <span class="action-label">Search Records</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Dashboard Bottom Section -->
+    <div class="dashboard-bottom">
+        <!-- System Insights -->
+        <div class="insights-card">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h2 class="section-title">System Insights</h2>
+            </div>
+            <div class="insights-list">
+                <div class="insight-item">
+                    <div class="insight-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">High Resolution Rate</div>
+                        <div class="insight-description">
+                            {{ crimes.solved }} cases resolved out of {{ crimes.total }} total
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Active Investigations</div>
+                        <div class="insight-description">
+                            {{ missing_persons.active_cases }} missing person cases require attention
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon info">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Wanted Individuals</div>
+                        <div class="insight-description">
+                            {{ criminals.wanted }} criminals currently wanted for arrest
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="insights-card">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h2 class="section-title">Quick Stats</h2>
+            </div>
+            <div class="insights-list">
+                <div class="insight-item">
+                    <div class="insight-icon success">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Case Resolution Rate</div>
+                        <div class="insight-description">
+                            {% if crimes.total > 0 %}
+                                {{ ((crimes.solved / crimes.total) * 100) | round(1) }}% of crimes solved
+                            {% else %}
+                                No data available
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon info">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Pending Cases</div>
+                        <div class="insight-description">
+                            {{ crimes.open }} open cases awaiting resolution
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon warning">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Active Punishments</div>
+                        <div class="insight-description">
+                            {{ punishments.active }} punishments currently in effect
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

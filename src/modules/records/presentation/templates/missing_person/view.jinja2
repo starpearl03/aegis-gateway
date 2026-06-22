@@ -1,0 +1,1235 @@
+{% extends 'base.jinja2' %}
+
+{% set person = missing_person if missing_person else {} %}
+{% set person_images = images if images else [] %}
+{% set last_seen_loc = person.last_seen_location if person and person.last_seen_location else {} %}
+{% set found_loc = person.found_location if person and person.found_location else {} %}
+{% set reporter_info = person.reporter if person and person.reporter else {} %}
+
+{% block title %}{{ person.first_name }} {{ person.last_name }} | Missing Person | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+}
+
+/* ===========================
+   BREADCRUMB - MATCHING LIST PAGE
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   HEADER SECTION - TRANSPARENT
+   =========================== */
+.person-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    position: relative;
+    overflow: hidden;
+}
+
+.person-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--error), #dc2626);
+}
+
+.person-photo-section {
+    flex-shrink: 0;
+}
+
+.person-main-photo {
+    width: 180px;
+    height: 180px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+    color: var(--error);
+    font-weight: 700;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.person-main-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.person-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.person-title-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.person-title-info h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.person-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.subtitle-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.subtitle-badge i {
+    font-size: 11px;
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.missing {
+    background: var(--error-bg);
+    color: var(--error);
+}
+
+.status-badge.found {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.status-badge.deceased {
+    background: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.person-quick-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 20px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.quick-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quick-info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quick-info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ===========================
+   CONTENT GRID
+   =========================== */
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ===========================
+   CONTENT CARD - TRANSPARENT
+   =========================== */
+.content-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.card-title i {
+    font-size: 18px;
+    color: var(--error);
+}
+
+.card-body {
+    padding: 24px;
+}
+
+/* ===========================
+   DETAIL ROWS
+   =========================== */
+.detail-row {
+    display: flex;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    flex: 1;
+    line-height: 1.6;
+}
+
+.detail-value.empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ===========================
+   LOCATION CARD - TRANSPARENT
+   =========================== */
+.location-card {
+    padding: 20px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.location-card:last-child {
+    margin-bottom: 0;
+}
+
+.location-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.location-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.location-icon.last-seen {
+    background: var(--error-bg);
+    color: var(--error);
+}
+
+.location-icon.found {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.location-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.location-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.location-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.location-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.location-item i {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.location-item-value {
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* ===========================
+   IMAGE GALLERY - TRANSPARENT
+   =========================== */
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.gallery-item {
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+.gallery-item:hover {
+    transform: scale(1.05);
+    border-color: var(--error);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gallery-item.primary::after {
+    content: 'Primary';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.no-images {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.no-images i {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+.no-images p {
+    font-size: 13px;
+    margin: 0;
+}
+
+/* ===========================
+   ALERT BOX - TRANSPARENT
+   =========================== */
+.alert-box {
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.alert-box.danger {
+    background: var(--error-bg);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.alert-box.success {
+    background: var(--success-bg);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.alert-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
+.alert-box.danger .alert-icon {
+    background: var(--error);
+    color: white;
+}
+
+.alert-box.success .alert-icon {
+    background: var(--success);
+    color: white;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.alert-box.danger .alert-title {
+    color: var(--error);
+}
+
+.alert-box.success .alert-title {
+    color: var(--success);
+}
+
+.alert-message {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.alert-box.danger .alert-message {
+    color: #dc2626;
+}
+
+.alert-box.success .alert-message {
+    color: #059669;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn i {
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--error);
+    color: var(--text-primary);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 1200px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .person-header {
+        flex-direction: column;
+        padding: 24px;
+    }
+
+    .person-main-photo {
+        width: 140px;
+        height: 140px;
+        font-size: 48px;
+    }
+
+    .person-title-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .person-quick-info {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .detail-label {
+        width: 100%;
+    }
+
+    .action-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('missing_person.list_missing_persons') }}" class="breadcrumb-item">
+            <span>Missing Persons</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>{{ person.first_name }} {{ person.last_name }}</span>
+        </span>
+    </div>
+
+    <!-- Person Header -->
+    <div class="person-header">
+        <div class="person-photo-section">
+            <div class="person-main-photo">
+                {% if person_images and person_images|length > 0 %}
+                    {% set primary_image = person_images|selectattr('is_primary')|first %}
+                    {% if primary_image %}
+                        <img src="{{ url_for('uploads', filename=primary_image.image_path|image_url) }}" alt="{{ person.first_name }} {{ person.last_name }}">
+                    {% else %}
+                        <img src="{{ url_for('uploads', filename=person_images[0].image_path|image_url) }}" alt="{{ person.first_name }} {{ person.last_name }}">
+                    {% endif %}
+                {% else %}
+                    {{ person.first_name[0] if person.first_name else 'U' }}{{ person.last_name[0] if person.last_name else 'N' }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="person-details">
+            <div class="person-title-section">
+                <div class="person-title-info">
+                    <h1>{{ person.first_name }} {{ person.last_name }}</h1>
+                    <div class="person-subtitle">
+                        {% if person.age %}
+                        <span class="subtitle-badge">
+                            <i class="fas fa-birthday-cake"></i>
+                            {{ person.age }} years old
+                        </span>
+                        {% endif %}
+                        {% if person.gender %}
+                        <span class="subtitle-badge">
+                            <i class="fas fa-venus-mars"></i>
+                            {{ person.gender }}
+                        </span>
+                        {% endif %}
+                        {% if person.national_id %}
+                        <span class="subtitle-badge">
+                            <i class="fas fa-id-card"></i>
+                            {{ person.national_id }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <span class="status-badge {{ person.status|lower if person.status else 'missing' }}">
+                        {{ person.status if person.status else 'MISSING' }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="person-quick-info">
+                <div class="quick-info-item">
+                    <div class="quick-info-label">Last Seen Date</div>
+                    <div class="quick-info-value">{{ person.last_seen_date[:10] if person.last_seen_date else 'Unknown' }}</div>
+                </div>
+                {% if person.height %}
+                <div class="quick-info-item">
+                    <div class="quick-info-label">Height</div>
+                    <div class="quick-info-value">{{ person.height }} cm</div>
+                </div>
+                {% endif %}
+                {% if person.weight %}
+                <div class="quick-info-item">
+                    <div class="quick-info-label">Weight</div>
+                    <div class="quick-info-value">{{ person.weight }} kg</div>
+                </div>
+                {% endif %}
+                {% if person.hair_color %}
+                <div class="quick-info-item">
+                    <div class="quick-info-label">Hair Color</div>
+                    <div class="quick-info-value">{{ person.hair_color }}</div>
+                </div>
+                {% endif %}
+                {% if person.eye_color %}
+                <div class="quick-info-item">
+                    <div class="quick-info-label">Eye Color</div>
+                    <div class="quick-info-value">{{ person.eye_color }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Alert -->
+    {% if person.status == 'MISSING' %}
+    <div class="alert-box danger">
+        <div class="alert-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="alert-content">
+            <div class="alert-title">Active Missing Person Case</div>
+            <div class="alert-message">
+                This person has been missing since {{ person.last_seen_date[:10] if person.last_seen_date else 'unknown date' }}.
+                If you have any information, please contact the authorities immediately.
+            </div>
+        </div>
+    </div>
+    {% elif person.status == 'FOUND' %}
+    <div class="alert-box success">
+        <div class="alert-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="alert-content">
+            <div class="alert-title">Person Found</div>
+            <div class="alert-message">
+                This person was found on {{ person.found_date[:10] if person.found_date else 'unknown date' }}.
+                {% if person.found_condition %}
+                    Condition: {{ person.found_condition }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Personal Information -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-user"></i>
+                        Personal Information
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name</div>
+                        <div class="detail-value">{{ person.first_name }} {{ person.last_name }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Date of Birth</div>
+                        <div class="detail-value {{ 'empty' if not person.date_of_birth else '' }}">
+                            {{ person.date_of_birth if person.date_of_birth else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Gender</div>
+                        <div class="detail-value {{ 'empty' if not person.gender else '' }}">
+                            {{ person.gender if person.gender else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Phone Number</div>
+                        <div class="detail-value {{ 'empty' if not person.phone_number else '' }}">
+                            {{ person.phone_number if person.phone_number else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value {{ 'empty' if not person.email else '' }}">
+                            {{ person.email if person.email else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">National ID</div>
+                        <div class="detail-value {{ 'empty' if not person.national_id else '' }}">
+                            {{ person.national_id if person.national_id else 'Not provided' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Physical Description -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-ruler-combined"></i>
+                        Physical Description
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Height</div>
+                        <div class="detail-value {{ 'empty' if not person.height else '' }}">
+                            {{ person.height ~ ' cm' if person.height else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Weight</div>
+                        <div class="detail-value {{ 'empty' if not person.weight else '' }}">
+                            {{ person.weight ~ ' kg' if person.weight else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Hair Color</div>
+                        <div class="detail-value {{ 'empty' if not person.hair_color else '' }}">
+                            {{ person.hair_color if person.hair_color else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Eye Color</div>
+                        <div class="detail-value {{ 'empty' if not person.eye_color else '' }}">
+                            {{ person.eye_color if person.eye_color else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Skin Tone</div>
+                        <div class="detail-value {{ 'empty' if not person.skin_tone else '' }}">
+                            {{ person.skin_tone if person.skin_tone else 'Not provided' }}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Distinctive Features</div>
+                        <div class="detail-value {{ 'empty' if not person.distinctive_features else '' }}">
+                            {{ person.distinctive_features if person.distinctive_features else 'Not provided' }}
+                        </div>
+                    </div>
+                    {% if person.description %}
+                    <div class="detail-row">
+                        <div class="detail-label">Additional Description</div>
+                        <div class="detail-value">{{ person.description }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Case Information -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-file-alt"></i>
+                        Case Information
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">
+                            <span class="status-badge {{ person.status|lower if person.status else 'missing' }}">
+                                {{ person.status if person.status else 'MISSING' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Reported Date</div>
+                        <div class="detail-value">{{ person.created_at[:10] if person.created_at else 'Unknown' }}</div>
+                    </div>
+                    {% if person.circumstances %}
+                    <div class="detail-row">
+                        <div class="detail-label">Circumstances</div>
+                        <div class="detail-value">{{ person.circumstances }}</div>
+                    </div>
+                    {% endif %}
+                    {% if person.assigned_officer_id %}
+                    <div class="detail-row">
+                        <div class="detail-label">Assigned Officer</div>
+                        <div class="detail-value">{{ person.assigned_officer_id }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Images -->
+            {% if person_images and person_images|length > 0 %}
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-images"></i>
+                        Photos ({{ person_images|length }})
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="image-gallery">
+                        {% for image in person_images %}
+                        <div class="gallery-item {{ 'primary' if image.is_primary else '' }}">
+                            <img src="{{ url_for('uploads', filename=image.image_path|image_url) }}" alt="Photo {{ loop.index }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar Content -->
+        <div class="sidebar-content">
+            <!-- Location Information -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Locations
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- Last Seen Location -->
+                    {% if last_seen_loc %}
+                    <div class="location-card">
+                        <div class="location-header">
+                            <div class="location-icon last-seen">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div>
+                                <div class="location-title">Last Seen Location</div>
+                                <div class="location-subtitle">{{ person.last_seen_date[:10] if person.last_seen_date else 'Unknown' }}</div>
+                            </div>
+                        </div>
+                        <div class="location-details">
+                            {% if last_seen_loc.address %}
+                            <div class="location-item">
+                                <i class="fas fa-home"></i>
+                                <span class="location-item-value">{{ last_seen_loc.address }}</span>
+                            </div>
+                            {% endif %}
+                            {% if last_seen_loc.city %}
+                            <div class="location-item">
+                                <i class="fas fa-city"></i>
+                                <span class="location-item-value">
+                                    {{ last_seen_loc.city }}{% if last_seen_loc.state %}, {{ last_seen_loc.state }}{% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% if last_seen_loc.country %}
+                            <div class="location-item">
+                                <i class="fas fa-globe"></i>
+                                <span class="location-item-value">{{ last_seen_loc.country }}</span>
+                            </div>
+                            {% endif %}
+                            {% if last_seen_loc.latitude and last_seen_loc.longitude %}
+                            <div class="location-item">
+                                <i class="fas fa-map-pin"></i>
+                                <span class="location-item-value">{{ last_seen_loc.latitude }}, {{ last_seen_loc.longitude }}</span>
+                            </div>
+                            {% endif %}
+                            {% if last_seen_loc.description %}
+                            <div class="location-item">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="location-item-value">{{ last_seen_loc.description }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Found Location -->
+                    {% if person.status == 'FOUND' and found_loc %}
+                    <div class="location-card">
+                        <div class="location-header">
+                            <div class="location-icon found">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div>
+                                <div class="location-title">Found Location</div>
+                                <div class="location-subtitle">{{ person.found_date[:10] if person.found_date else 'Unknown' }}</div>
+                            </div>
+                        </div>
+                        <div class="location-details">
+                            {% if found_loc.address %}
+                            <div class="location-item">
+                                <i class="fas fa-home"></i>
+                                <span class="location-item-value">{{ found_loc.address }}</span>
+                            </div>
+                            {% endif %}
+                            {% if found_loc.city %}
+                            <div class="location-item">
+                                <i class="fas fa-city"></i>
+                                <span class="location-item-value">
+                                    {{ found_loc.city }}{% if found_loc.state %}, {{ found_loc.state }}{% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% if found_loc.country %}
+                            <div class="location-item">
+                                <i class="fas fa-globe"></i>
+                                <span class="location-item-value">{{ found_loc.country }}</span>
+                            </div>
+                            {% endif %}
+                            {% if found_loc.latitude and found_loc.longitude %}
+                            <div class="location-item">
+                                <i class="fas fa-map-pin"></i>
+                                <span class="location-item-value">{{ found_loc.latitude }}, {{ found_loc.longitude }}</span>
+                            </div>
+                            {% endif %}
+                            {% if person.found_condition %}
+                            <div class="location-item">
+                                <i class="fas fa-heartbeat"></i>
+                                <span class="location-item-value">Condition: {{ person.found_condition }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reporter Information -->
+            {% if reporter_info %}
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-user-tie"></i>
+                        Reporter Information
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Name</div>
+                        <div class="detail-value">{{ reporter_info.first_name }} {{ reporter_info.last_name }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Relationship</div>
+                        <div class="detail-value">{{ reporter_info.relationship if reporter_info.relationship else 'Not specified' }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Phone</div>
+                        <div class="detail-value">{{ reporter_info.phone if reporter_info.phone else 'Not provided' }}</div>
+                    </div>
+                    {% if reporter_info.email %}
+                    <div class="detail-row">
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value">{{ reporter_info.email }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-cog"></i>
+                        Actions
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="{{ url_for('missing_person.missing_person_form', missing_person_id=person.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-edit"></i>
+                            Edit Information
+                        </a>
+
+                        {% if person.status == 'MISSING' %}
+                        <button class="btn btn-success" onclick="updateStatus('{{ person.id }}', 'FOUND')">
+                            <i class="fas fa-check-circle"></i>
+                            Mark as Found
+                        </button>
+                        {% endif %}
+
+                        <button class="btn btn-primary" onclick="window.print()">
+                            <i class="fas fa-print"></i>
+                            Print Poster
+                        </button>
+
+                        <a href="{{ url_for('missing_person.list_missing_persons') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i>
+                            Back to List
+                        </a>
+
+                        <button class="btn btn-danger" onclick="deletePerson('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}')">
+                            <i class="fas fa-trash-alt"></i>
+                            Delete Case
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-clock"></i>
+                        Timeline
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="detail-row">
+                        <div class="detail-label">Reported</div>
+                        <div class="detail-value">{{ person.created_at if person.created_at else 'Unknown' }}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Last Updated</div>
+                        <div class="detail-value">{{ person.updated_at if person.updated_at else 'Never' }}</div>
+                    </div>
+                    {% if person.found_date %}
+                    <div class="detail-row">
+                        <div class="detail-label">Found Date</div>
+                        <div class="detail-value">{{ person.found_date }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update Status Function
+    async function updateStatus(personId, newStatus) {
+        const notes = prompt(`Enter any notes for marking this person as ${newStatus}:`);
+        if (notes === null) return; // User cancelled
+
+        const formData = new FormData();
+        formData.append('status', newStatus);
+        if (notes) formData.append('notes', notes);
+
+        try {
+            const response = await fetch(`/missing-persons/${personId}/update-status`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                if (window.toast) {
+                    window.toast.error('Error', data.message || 'Failed to update status');
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to update status'));
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.success('Success', data.message || 'Status updated successfully');
+                } else {
+                    alert('Success: ' + (data.message || 'Status updated successfully'));
+                }
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            if (window.toast) {
+                window.toast.error('Error', 'Failed to update status');
+            } else {
+                alert('Error: Failed to update status');
+            }
+        }
+    }
+
+    // Delete Person Function
+    async function deletePerson(personId, personName) {
+        if (!confirm(`Are you sure you want to delete the case for "${personName}"?\n\nThis action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/missing-persons/${personId}/delete`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                if (window.toast) {
+                    window.toast.error('Error', data.message || 'Failed to delete case');
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to delete case'));
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.success('Success', data.message || 'Case deleted successfully');
+                } else {
+                    alert('Success: ' + (data.message || 'Case deleted successfully'));
+                }
+                setTimeout(() => window.location.href = '{{ url_for("missing_person.list_missing_persons") }}', 1000);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            if (window.toast) {
+                window.toast.error('Error', 'Failed to delete case');
+            } else {
+                alert('Error: Failed to delete case');
+            }
+        }
+    }
+
+    // Print Styles
+    window.addEventListener('beforeprint', function() {
+        document.querySelector('.sidebar-content').style.display = 'none';
+        document.querySelectorAll('.action-buttons').forEach(el => el.style.display = 'none');
+    });
+
+    window.addEventListener('afterprint', function() {
+        document.querySelector('.sidebar-content').style.display = 'flex';
+        document.querySelectorAll('.action-buttons').forEach(el => el.style.display = 'flex');
+    });
+</script>
+{% endblock %}
