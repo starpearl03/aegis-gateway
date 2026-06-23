@@ -24,6 +24,7 @@ class PersonImageUtils:
     def upload_person_image(self, request: CreatePersonImageRequest) -> PersonImageResponse:
         """
         Upload an image for a person with automatic face vector generation.
+        Images without detected faces are saved without face vectors.
 
         Args:
             request: CreatePersonImageRequest DTO
@@ -33,7 +34,7 @@ class PersonImageUtils:
 
         Raises:
             NotFoundException: If person not found
-            ValidationException: If image data is invalid or face detection fails
+            ValidationException: If image data is invalid
         """
         # Verify person exists
         person = self.person_repo.find_by_id(request.person_id)
@@ -45,16 +46,19 @@ class PersonImageUtils:
             logger.info(f"Extracting face vector from image: {request.image_path}")
             face_vectors = self.face_recognition.extract_face_vector(request.image_path)
 
-            # Validate that at least one face was detected
-            if not face_vectors or len(face_vectors) == 0:
-                raise ValidationException(
-                    f"No face detected in image: {request.image_path}. "
-                    "Please upload a clear image with a visible face."
-                )
+            # Initialize face_vector as None
+            face_vector = None
 
-            # Use the first detected face vector (highest quality)
-            face_vector = face_vectors[0]
-            logger.info(f"Successfully extracted face vector with {len(face_vector)} dimensions")
+            # Check if at least one face was detected
+            if not face_vectors or len(face_vectors) == 0:
+                logger.warning(
+                    f"No face detected in image: {request.image_path}. "
+                    "Image will be saved without face vector."
+                )
+            else:
+                # Use the first detected face vector
+                face_vector = face_vectors[0]
+                logger.info(f"Successfully extracted face vector with {len(face_vector)} dimensions")
 
             # Check if this is the first image for this person
             existing_images = self.image_repo.find_by_person_id(request.person_id)
@@ -68,11 +72,11 @@ class PersonImageUtils:
             if request.is_primary:
                 self._unset_primary_images(request.person_id)
 
-            # Create image entity with face vector
+            # Create image entity with or without face vector
             image = PersonImage(
                 person_id=request.person_id,
                 image_path=request.image_path,
-                image_vector=face_vector,  # Store the extracted face vector
+                image_vector=face_vector,
                 is_primary=request.is_primary if request.is_primary is not None else False,
                 quality_score=request.quality_score,
                 uploaded_by=request.uploaded_by
@@ -81,7 +85,10 @@ class PersonImageUtils:
             # Save to database
             saved_image = self.image_repo.create(image)
 
-            logger.info(f"Successfully uploaded image with face vector for person {request.person_id}")
+            if face_vector is not None:
+                logger.info(f"Successfully uploaded image with face vector for person {request.person_id}")
+            else:
+                logger.info(f"Successfully uploaded image without face vector for person {request.person_id}")
 
             # Return response DTO
             return PersonImageResponse(
@@ -109,6 +116,7 @@ class PersonImageUtils:
     ) -> List[PersonImageResponse]:
         """
         Upload multiple images for a person with automatic face vector generation.
+        Images without detected faces are saved without face vectors.
 
         Args:
             person_id: Person ID
@@ -120,7 +128,7 @@ class PersonImageUtils:
 
         Raises:
             NotFoundException: If person not found
-            ValidationException: If no faces detected in any image
+            ValidationException: If all images fail to upload
         """
         # Verify person exists
         person = self.person_repo.find_by_id(person_id)
@@ -140,7 +148,7 @@ class PersonImageUtils:
                     uploaded_by=uploaded_by
                 )
 
-                # Upload image with face vector
+                # Upload image
                 image_response = self.upload_person_image(request)
                 uploaded_images.append(image_response)
 
@@ -151,8 +159,7 @@ class PersonImageUtils:
 
         if not uploaded_images:
             raise ValidationException(
-                f"Failed to upload any images. No faces detected in provided images. "
-                f"Failed: {len(failed_images)}"
+                f"Failed to upload any images. Errors: {failed_images}"
             )
 
         if failed_images:
