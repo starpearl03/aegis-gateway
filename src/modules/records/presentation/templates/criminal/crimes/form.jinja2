@@ -1,0 +1,1056 @@
+{% extends 'base.jinja2' %}
+
+{% set crime_data = crime if crime else {} %}
+{% set criminal_data = criminal if criminal else {} %}
+{% set is_editing = is_edit if is_edit else false %}
+{% set from_criminal = from_criminal_view if from_criminal_view else false %}
+{% set form_title = 'Edit Crime Case' if is_editing else 'Add Crime Case' %}
+
+{% block title %}{{ form_title }} | Sentinel{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   FORM HEADER - TRANSPARENT
+   =========================== */
+.form-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.header-icon i {
+    font-size: 28px;
+    color: var(--info);
+}
+
+.header-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.header-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ===========================
+   CRIMINAL INFO BANNER
+   =========================== */
+.criminal-banner {
+    background: rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.criminal-banner i {
+    font-size: 20px;
+    color: var(--info);
+}
+
+.criminal-banner-text {
+    flex: 1;
+}
+
+.criminal-banner-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.criminal-banner-name {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ===========================
+   FORM CONTAINER - TRANSPARENT
+   =========================== */
+.form-container {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ===========================
+   FORM BODY - TRANSPARENT
+   =========================== */
+.form-body {
+    padding: 32px;
+}
+
+/* ===========================
+   FORM SECTIONS
+   =========================== */
+.form-section {
+    margin-bottom: 32px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--info);
+    font-size: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid.single {
+    grid-template-columns: 1fr;
+}
+
+/* ===========================
+   FORM GROUPS - TRANSPARENT
+   =========================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.required {
+    color: var(--error);
+    font-size: 16px;
+}
+
+.optional {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.form-control {
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: #ffffff !important;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--info);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    color: #ffffff !important;
+}
+
+/* Fix for autocomplete white background - FORCE WHITE TEXT */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(10, 14, 39, 0.4) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(10, 14, 39, 0.4) !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Force white text for all input states */
+input.form-control,
+textarea.form-control,
+select.form-control {
+    color: #ffffff !important;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+select.form-control:focus {
+    color: #ffffff !important;
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+select.form-control option {
+    background: var(--bg-tertiary);
+    color: #ffffff;
+}
+
+.form-helper {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-helper i {
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* ===========================
+   MAP CONTAINER - TRANSPARENT
+   =========================== */
+.map-container {
+    height: 400px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: 16px;
+}
+
+.map-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.map-controls input {
+    flex: 1;
+}
+
+.btn-map {
+    padding: 12px 20px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+
+.btn-map:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--info);
+}
+
+.btn-map i {
+    margin-right: 6px;
+}
+
+/* ===========================
+   FORM FOOTER - TRANSPARENT
+   =========================== */
+.form-footer {
+    padding: 24px 32px;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.footer-left {
+    display: flex;
+    gap: 12px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--info), #2563eb);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--info);
+}
+
+/* ===========================
+   LOADING STATE
+   =========================== */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+    .form-header {
+        padding: 24px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .form-body {
+        padding: 24px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-left,
+    .footer-right {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .map-controls {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        {% if from_criminal %}
+        <a href="{{ url_for('criminal.list_criminals') }}" class="breadcrumb-item">
+            <span>Criminals</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.view_criminal', criminal_id=criminal_data.id) }}" class="breadcrumb-item">
+            <span>{{ criminal_data.first_name }} {{ criminal_data.last_name }}</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('criminal.list_crimes') }}" class="breadcrumb-item">
+            <span>Crime Cases</span>
+        </a>
+        {% endif %}
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>{{ form_title }}</span>
+        </span>
+    </div>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-{{ 'edit' if is_editing else 'plus' }}"></i>
+            </div>
+            <div class="header-text">
+                <h1>{{ form_title }}</h1>
+                <p>{{ 'Update crime case information and details' if is_editing else 'Fill out the form below to add a new crime case to the system. Fields marked with * are required.' }}</p>
+            </div>
+        </div>
+
+        <!-- Criminal Banner (if adding crime to specific criminal) -->
+        {% if from_criminal and criminal_data %}
+        <div class="criminal-banner">
+            <i class="fas fa-user-secret"></i>
+            <div class="criminal-banner-text">
+                <div class="criminal-banner-title">Adding crime for</div>
+                <div class="criminal-banner-name">{{ criminal_data.first_name }} {{ criminal_data.last_name }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+        <!-- Form -->
+        <form id="crimeForm" method="POST" enctype="multipart/form-data"
+              action="{{ url_for('criminal.crime_form', crime_id=crime_data.id) if is_editing else (url_for('criminal.add_crime_to_criminal_form', criminal_id=criminal_data.id) if from_criminal else url_for('criminal.crime_form')) }}">
+
+            <div class="form-body">
+                <!-- Crime Information -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Crime Information
+                    </h3>
+
+                    <div class="form-grid">
+                        {% if not is_editing %}
+                        <div class="form-group">
+                            <label class="form-label">
+                                Case Number <span class="required">*</span>
+                            </label>
+                            <input type="text" name="case_number" class="form-control"
+                                   placeholder="e.g., CASE-2024-001" required
+                                   value="{{ crime_data.case_number if crime_data.case_number else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Unique identifier for this case
+                            </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Crime Type <span class="required">*</span>
+                            </label>
+                            <select name="crime_type" class="form-control" required>
+                                <option value="">Select crime type</option>
+                                <option value="THEFT" {% if crime_data.crime_type == 'THEFT' %}selected{% endif %}>Theft</option>
+                                <option value="BURGLARY" {% if crime_data.crime_type == 'BURGLARY' %}selected{% endif %}>Burglary</option>
+                                <option value="ROBBERY" {% if crime_data.crime_type == 'ROBBERY' %}selected{% endif %}>Robbery</option>
+                                <option value="ASSAULT" {% if crime_data.crime_type == 'ASSAULT' %}selected{% endif %}>Assault</option>
+                                <option value="MURDER" {% if crime_data.crime_type == 'MURDER' %}selected{% endif %}>Murder</option>
+                                <option value="KIDNAPPING" {% if crime_data.crime_type == 'KIDNAPPING' %}selected{% endif %}>Kidnapping</option>
+                                <option value="FRAUD" {% if crime_data.crime_type == 'FRAUD' %}selected{% endif %}>Fraud</option>
+                                <option value="DRUG_TRAFFICKING" {% if crime_data.crime_type == 'DRUG_TRAFFICKING' %}selected{% endif %}>Drug Trafficking</option>
+                                <option value="VANDALISM" {% if crime_data.crime_type == 'VANDALISM' %}selected{% endif %}>Vandalism</option>
+                                <option value="ARSON" {% if crime_data.crime_type == 'ARSON' %}selected{% endif %}>Arson</option>
+                                <option value="OTHER" {% if crime_data.crime_type == 'OTHER' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Date Committed <span class="required">*</span>
+                            </label>
+                            <input type="datetime-local" name="date_committed" class="form-control" required
+                                   value="{{ crime_data.date_committed[:16] if crime_data.date_committed else '' }}">
+                        </div>
+
+                        {% if not from_criminal %}
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Criminal ID <span class="required">*</span>
+                            </label>
+                            <input type="text" name="criminal_id" class="form-control"
+                                   placeholder="Enter criminal ID" required
+                                   value="{{ crime_data.criminal_id if crime_data.criminal_id else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                ID of the criminal associated with this crime
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        <div class="form-group {{ 'full-width' if is_editing else '' }}">
+                            <label class="form-label">
+                                Status <span class="{{ 'required' if is_editing else 'optional' }}">{{ '*' if is_editing else '(Optional)' }}</span>
+                            </label>
+                            <select name="status" class="form-control" {{ 'required' if is_editing else '' }}>
+                                <option value="">Select status</option>
+                                <option value="OPEN" {% if crime_data.status == 'OPEN' %}selected{% endif %}>Open</option>
+                                <option value="UNDER_INVESTIGATION" {% if crime_data.status == 'UNDER_INVESTIGATION' %}selected{% endif %}>Under Investigation</option>
+                                <option value="CLOSED" {% if crime_data.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                                <option value="SOLVED" {% if crime_data.status == 'SOLVED' %}selected{% endif %}>Solved</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group {{ 'full-width' if is_editing else '' }}">
+                            <label class="form-label">
+                                Assigned Officer <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="assigned_officer_id" class="form-control"
+                                   placeholder="Enter officer ID"
+                                   value="{{ crime_data.assigned_officer_id if crime_data.assigned_officer_id else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="form-grid single">
+                        <div class="form-group">
+                            <label class="form-label">
+                                Description <span class="{{ 'required' if not is_editing else 'optional' }}">{{ '*' if not is_editing else '(Optional)' }}</span>
+                            </label>
+                            <textarea name="description" class="form-control"
+                                      placeholder="Detailed description of the crime..."
+                                      rows="5" {{ 'required' if not is_editing else '' }}>{{ crime_data.description if crime_data.description else '' }}</textarea>
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Provide as much detail as possible about the incident
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not is_editing %}
+                <!-- Location Information -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Crime Location
+                    </h3>
+
+                    <!-- Map Container -->
+                    <div class="form-group full-width">
+                        <label class="form-label">
+                            Select Location on Map <span class="required">*</span>
+                        </label>
+                        <div id="crimeMap" class="map-container"></div>
+                        <div class="map-controls">
+                            <input type="text" id="searchLocation" class="form-control"
+                                   placeholder="Search for a location (e.g., Harare CBD, Zimbabwe)">
+                            <button type="button" class="btn-map" onclick="searchLocationOnMap()">
+                                <i class="fas fa-search"></i>
+                                Search
+                            </button>
+                            <button type="button" class="btn-map" onclick="getCurrentLocation()">
+                                <i class="fas fa-crosshairs"></i>
+                                My Location
+                            </button>
+                        </div>
+                        <span class="form-helper">
+                            <i class="fas fa-info-circle"></i>
+                            Click on the map to select the crime location or search for an address
+                        </span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                Latitude <span class="required">*</span>
+                            </label>
+                            <input type="number" name="latitude" id="latitude" class="form-control"
+                                   placeholder="-17.8292" step="any" required readonly>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Longitude <span class="required">*</span>
+                            </label>
+                            <input type="number" name="longitude" id="longitude" class="form-control"
+                                   placeholder="31.0522" step="any" required readonly>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Address <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="address" id="address" class="form-control"
+                                   placeholder="Street address">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                City <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="city" id="city" class="form-control"
+                                   placeholder="Harare">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                State/Province <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="state" id="state" class="form-control"
+                                   placeholder="Harare Province">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Country <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="country" id="country" class="form-control"
+                                   placeholder="Zimbabwe">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Postal Code <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="postal_code" class="form-control"
+                                   placeholder="00000000" value="00000000">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Location Description <span class="optional">(Optional)</span>
+                            </label>
+                            <textarea name="location_description" class="form-control"
+                                      placeholder="Additional details about the location..."
+                                      rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Form Footer -->
+            <div class="form-footer">
+                <div class="footer-left"></div>
+                <div class="footer-right">
+                    <a href="{{ url_for('criminal.view_criminal', criminal_id=criminal_data.id) if from_criminal else url_for('criminal.list_crimes') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save"></i>
+                        {{ 'Update Crime' if is_editing else 'Add Crime' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not is_editing %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endif %}
+
+<script>
+{% if not is_editing %}
+let crimeMap;
+let crimeMarker;
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCrimeMap();
+});
+
+// Initialize Crime Map
+function initializeCrimeMap() {
+    // Default center (Harare, Zimbabwe)
+    const defaultLat = -17.8292;
+    const defaultLng = 31.0522;
+
+    // Initialize map
+    crimeMap = L.map('crimeMap').setView([defaultLat, defaultLng], 13);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(crimeMap);
+
+    // Add click event to map
+    crimeMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // Remove existing marker if any
+        if (crimeMarker) {
+            crimeMap.removeLayer(crimeMarker);
+        }
+
+        // Add new marker
+        crimeMarker = L.marker([lat, lng], {
+            draggable: true
+        }).addTo(crimeMap);
+
+        // Update form fields
+        updateLocationFields(lat, lng);
+
+        // Reverse geocode to get address
+        reverseGeocode(lat, lng);
+
+        // Add drag event
+        crimeMarker.on('dragend', function(e) {
+            const position = crimeMarker.getLatLng();
+            updateLocationFields(position.lat, position.lng);
+            reverseGeocode(position.lat, position.lng);
+        });
+    });
+}
+
+// Update location input fields
+function updateLocationFields(lat, lng) {
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+}
+
+// Reverse geocode location
+function reverseGeocode(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.address) {
+                document.getElementById('address').value = data.display_name || '';
+                document.getElementById('city').value = data.address.city || data.address.town || data.address.village || '';
+                document.getElementById('state').value = data.address.state || data.address.province || '';
+                document.getElementById('country').value = data.address.country || '';
+            }
+        })
+        .catch(error => {
+            console.error('Reverse geocoding failed:', error);
+        });
+}
+
+// Search location on map
+function searchLocationOnMap() {
+    const searchQuery = document.getElementById('searchLocation').value;
+
+    if (!searchQuery.trim()) {
+        if (window.toast) {
+            window.toast.warning('Input Required', 'Please enter a location to search');
+        } else {
+            alert('Please enter a location to search');
+        }
+        return;
+    }
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const result = data[0];
+                const lat = parseFloat(result.lat);
+                const lng = parseFloat(result.lon);
+
+                crimeMap.setView([lat, lng], 15);
+
+                if (crimeMarker) {
+                    crimeMap.removeLayer(crimeMarker);
+                }
+
+                crimeMarker = L.marker([lat, lng], {
+                    draggable: true
+                }).addTo(crimeMap);
+
+                updateLocationFields(lat, lng);
+                reverseGeocode(lat, lng);
+
+                crimeMarker.on('dragend', function(e) {
+                    const position = crimeMarker.getLatLng();
+                    updateLocationFields(position.lat, position.lng);
+                    reverseGeocode(position.lat, position.lng);
+                });
+
+                if (window.toast) {
+                    window.toast.success('Location Found', 'Click on the map to adjust the exact position');
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.error('Not Found', 'Location not found. Try a different search term.');
+                } else {
+                    alert('Location not found. Try a different search term.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Geocoding failed:', error);
+            if (window.toast) {
+                window.toast.error('Search Failed', 'Failed to search location. Please try again.');
+            } else {
+                alert('Failed to search location. Please try again.');
+            }
+        });
+}
+
+// Get current location
+function getCurrentLocation() {
+    if (!navigator.geolocation) {
+        if (window.toast) {
+            window.toast.error('Not Supported', 'Geolocation is not supported by your browser');
+        } else {
+            alert('Geolocation is not supported by your browser');
+        }
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            crimeMap.setView([lat, lng], 15);
+
+            if (crimeMarker) {
+                crimeMap.removeLayer(crimeMarker);
+            }
+
+            crimeMarker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(crimeMap);
+
+            updateLocationFields(lat, lng);
+            reverseGeocode(lat, lng);
+
+            crimeMarker.on('dragend', function(e) {
+                const position = crimeMarker.getLatLng();
+                updateLocationFields(position.lat, position.lng);
+                reverseGeocode(position.lat, position.lng);
+            });
+
+            if (window.toast) {
+                window.toast.success('Location Found', 'Your current location has been set');
+            }
+        },
+        function(error) {
+            console.error('Geolocation error:', error);
+            if (window.toast) {
+                window.toast.error('Location Error', 'Unable to retrieve your location. Please check your browser settings.');
+            } else {
+                alert('Unable to retrieve your location. Please check your browser settings.');
+            }
+        }
+    );
+}
+
+// Allow Enter key in search input to trigger search
+document.getElementById('searchLocation').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        searchLocationOnMap();
+    }
+});
+{% endif %}
+
+// Form submission
+document.getElementById('crimeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    {% if not is_editing %}
+    // Validate that location is selected
+    const latitude = document.getElementById('latitude').value;
+    const longitude = document.getElementById('longitude').value;
+
+    if (!latitude || !longitude) {
+        if (window.toast) {
+            window.toast.warning('Location Required', 'Please select a location on the map');
+        } else {
+            alert('Please select a location on the map');
+        }
+        return;
+    }
+    {% endif %}
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+
+    const formData = new FormData(this);
+
+    {% if from_criminal and not is_editing %}
+    // Add criminal_id if adding crime to specific criminal
+    formData.set('criminal_id', '{{ criminal_data.id }}');
+    {% endif %}
+
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            if (window.toast) {
+                window.toast.error('Error', data.message || 'Failed to submit form');
+            } else {
+                alert('Error: ' + (data.message || 'Failed to submit form'));
+            }
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        } else {
+            if (window.toast) {
+                window.toast.success('Success', data.message || 'Crime {{ "updated" if is_editing else "added" }} successfully');
+            } else {
+                alert('Success: ' + (data.message || 'Crime {{ "updated" if is_editing else "added" }} successfully'));
+            }
+
+            // Redirect after short delay
+            setTimeout(() => {
+                {% if from_criminal %}
+                window.location.href = '{{ url_for("criminal.view_criminal", criminal_id=criminal_data.id) }}';
+                {% else %}
+                window.location.href = '{{ url_for("criminal.list_crimes") }}';
+                {% endif %}
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        if (window.toast) {
+            window.toast.error('Error', 'Failed to submit form');
+        } else {
+            alert('Error: Failed to submit form');
+        }
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,845 @@
+{% extends 'base.jinja2' %}
+
+{% set evidence_data = evidence if evidence else {} %}
+{% set crime_data = crime if crime else {} %}
+{% set is_editing = is_edit if is_edit else false %}
+{% set form_title = 'Edit Evidence' if is_editing else 'Add Evidence' %}
+
+{% block title %}{{ form_title }} | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   FORM HEADER - TRANSPARENT
+   =========================== */
+.form-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.header-icon i {
+    font-size: 28px;
+    color: var(--success);
+}
+
+.header-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.header-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ===========================
+   CRIME INFO BANNER
+   =========================== */
+.crime-banner {
+    background: rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.crime-banner i {
+    font-size: 20px;
+    color: var(--info);
+}
+
+.crime-banner-text {
+    flex: 1;
+}
+
+.crime-banner-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.crime-banner-name {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.crime-banner-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* ===========================
+   FORM CONTAINER - TRANSPARENT
+   =========================== */
+.form-container {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ===========================
+   FORM BODY - TRANSPARENT
+   =========================== */
+.form-body {
+    padding: 32px;
+}
+
+/* ===========================
+   FORM SECTIONS
+   =========================== */
+.form-section {
+    margin-bottom: 32px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--success);
+    font-size: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid.single {
+    grid-template-columns: 1fr;
+}
+
+/* ===========================
+   FORM GROUPS - TRANSPARENT
+   =========================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.required {
+    color: var(--error);
+    font-size: 16px;
+}
+
+.optional {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.form-control {
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: #ffffff !important;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    color: #ffffff !important;
+}
+
+/* Fix for autocomplete white background - FORCE WHITE TEXT */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(10, 14, 39, 0.4) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(10, 14, 39, 0.4) !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Force white text for all input states */
+input.form-control,
+textarea.form-control,
+select.form-control {
+    color: #ffffff !important;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+select.form-control:focus {
+    color: #ffffff !important;
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+select.form-control option {
+    background: var(--bg-tertiary);
+    color: #ffffff;
+}
+
+.form-helper {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-helper i {
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* ===========================
+   FILE UPLOAD - TRANSPARENT
+   =========================== */
+.file-upload-section {
+    padding: 24px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.file-upload-section:hover {
+    border-color: var(--success);
+    background: rgba(10, 14, 39, 0.2);
+}
+
+.upload-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+}
+
+.upload-icon i {
+    font-size: 28px;
+    color: var(--success);
+}
+
+.upload-text {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.file-preview {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.file-info i {
+    font-size: 20px;
+    color: var(--success);
+}
+
+.file-name {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.file-remove {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.file-remove:hover {
+    background: var(--error-bg);
+    color: var(--error);
+    border-color: var(--error);
+}
+
+/* ===========================
+   FORM FOOTER - TRANSPARENT
+   =========================== */
+.form-footer {
+    padding: 24px 32px;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.footer-left {
+    display: flex;
+    gap: 12px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--success);
+}
+
+/* ===========================
+   LOADING STATE
+   =========================== */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+    .form-header {
+        padding: 24px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .form-body {
+        padding: 24px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-left,
+    .footer-right {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.list_crimes') }}" class="breadcrumb-item">
+            <span>Crime Cases</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.view_crime', crime_id=crime_data.id) }}" class="breadcrumb-item">
+            <span>Case #{{ crime_data.case_number }}</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>{{ form_title }}</span>
+        </span>
+    </div>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div class="header-text">
+                <h1>{{ form_title }}</h1>
+                <p>{{ 'Update evidence information and documentation' if is_editing else 'Add evidence to this crime case. Fields marked with * are required.' }}</p>
+            </div>
+        </div>
+
+        <!-- Crime Banner -->
+        <div class="crime-banner">
+            <i class="fas fa-gavel"></i>
+            <div class="crime-banner-text">
+                <div class="crime-banner-title">Crime Case</div>
+                <div class="crime-banner-name">{{ crime_data.crime_type }}</div>
+                <div class="crime-banner-meta">Case #{{ crime_data.case_number }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+        <!-- Form -->
+        <form id="evidenceForm" method="POST" enctype="multipart/form-data"
+              action="{{ url_for('criminal.evidence_form', crime_id=crime_data.id, evidence_id=evidence_data.id) if is_editing else url_for('criminal.evidence_form', crime_id=crime_data.id) }}">
+
+            <div class="form-body">
+                <!-- Evidence Information -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Evidence Information
+                    </h3>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                Evidence Type <span class="required">*</span>
+                            </label>
+                            <select name="type" class="form-control" required>
+                                <option value="">Select evidence type</option>
+                                <option value="photograph" {% if evidence_data.type == 'PHOTOGRAPH' %}selected{% endif %}>Photograph</option>
+                                <option value="video" {% if evidence_data.type == 'VIDEO' %}selected{% endif %}>Video</option>
+                                <option value="audio" {% if evidence_data.type == 'AUDIO' %}selected{% endif %}>Audio</option>
+                                <option value="document" {% if evidence_data.type == 'DOCUMENT' %}selected{% endif %}>Document</option>
+                                <option value="physical" {% if evidence_data.type == 'PHYSICAL' %}selected{% endif %}>Physical Evidence</option>
+                                <option value="digital" {% if evidence_data.type == 'DIGITAL' %}selected{% endif %}>Digital Evidence</option>
+                                <option value="forensic" {% if evidence_data.type == 'FORENSIC' %}selected{% endif %}>Forensic Evidence</option>
+                                <option value="witness_statement" {% if evidence_data.type == 'WITNESS_STATEMENT' %}selected{% endif %}>Witness Statement</option>
+                                <option value="dna" {% if evidence_data.type == 'DNA' %}selected{% endif %}>DNA</option>
+                                <option value="fingerprint" {% if evidence_data.type == 'FINGERPRINT' %}selected{% endif %}>Fingerprint</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Collected Date <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="datetime-local" name="collected_date" class="form-control"
+                                   value="{{ evidence_data.collected_date[:16] if evidence_data.collected_date else '' }}">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Storage Location <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="text" name="storage_location" class="form-control"
+                                   placeholder="Evidence locker, room, etc."
+                                   value="{{ evidence_data.storage_location if evidence_data.storage_location else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Where the evidence is currently stored
+                            </span>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Description <span class="required">*</span>
+                            </label>
+                            <textarea name="description" class="form-control"
+                                      placeholder="Detailed description of the evidence..."
+                                      rows="5" required>{{ evidence_data.description if evidence_data.description else '' }}</textarea>
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Provide a thorough description including condition, appearance, and relevance
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evidence File Upload -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-paperclip"></i>
+                        Evidence File
+                    </h3>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Upload Evidence File <span class="optional">(Optional)</span>
+                        </label>
+
+                        <div class="file-upload-section" onclick="document.getElementById('evidenceFileInput').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">Click to upload evidence file</div>
+                            <div class="upload-hint">PDF, DOC, images, videos, or audio files (Max 50MB)</div>
+                        </div>
+
+                        <input type="file" id="evidenceFileInput" name="evidence_file"
+                               accept=".pdf,.doc,.docx,image/*,video/*,audio/*" style="display: none;"
+                               onchange="previewFile(event)">
+
+                        <div id="filePreview" style="display: none;"></div>
+
+                        {% if is_editing and evidence_data.file_path %}
+                        <div style="margin-top: 16px;">
+                            <div class="file-preview">
+                                <div class="file-info">
+                                    <i class="fas fa-file"></i>
+                                    <span class="file-name">Existing Evidence File</span>
+                                </div>
+                                <a href="{{ evidence_data.file_path }}" target="_blank"
+                                   style="padding: 8px 16px; background: rgba(16, 185, 129, 0.15); color: var(--success); border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <span class="form-helper" style="margin-top: 12px;">
+                            <i class="fas fa-info-circle"></i>
+                            Upload photos, videos, documents, or other files related to this evidence
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Footer -->
+            <div class="form-footer">
+                <div class="footer-left"></div>
+                <div class="footer-right">
+                    <a href="{{ url_for('criminal.view_crime', crime_id=crime_data.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save"></i>
+                        {{ 'Update Evidence' if is_editing else 'Add Evidence' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let uploadedFile = null;
+
+// File preview function
+function previewFile(event) {
+    const file = event.target.files[0];
+    const previewDiv = document.getElementById('filePreview');
+
+    if (!file) {
+        previewDiv.style.display = 'none';
+        uploadedFile = null;
+        return;
+    }
+
+    // Validate file size (50MB)
+    if (file.size > 50 * 1024 * 1024) {
+        if (window.toast) {
+            window.toast.warning('File Too Large', 'File size exceeds 50MB limit');
+        } else {
+            alert('File size exceeds 50MB limit');
+        }
+        event.target.value = '';
+        previewDiv.style.display = 'none';
+        uploadedFile = null;
+        return;
+    }
+
+    uploadedFile = file;
+
+    // Determine file icon
+    let fileIcon = 'file';
+    if (file.type.includes('pdf')) {
+        fileIcon = 'file-pdf';
+    } else if (file.type.includes('image')) {
+        fileIcon = 'file-image';
+    } else if (file.type.includes('video')) {
+        fileIcon = 'file-video';
+    } else if (file.type.includes('audio')) {
+        fileIcon = 'file-audio';
+    } else if (file.type.includes('word') || file.type.includes('document')) {
+        fileIcon = 'file-word';
+    }
+
+    // Show preview
+    previewDiv.style.display = 'block';
+    previewDiv.innerHTML = `
+        <div class="file-preview">
+            <div class="file-info">
+                <i class="fas fa-${fileIcon}"></i>
+                <span class="file-name">${file.name}</span>
+            </div>
+            <button type="button" class="file-remove" onclick="removeFile()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+}
+
+// Remove file
+function removeFile() {
+    document.getElementById('evidenceFileInput').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+    uploadedFile = null;
+}
+
+// Form submission
+document.getElementById('evidenceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+
+    const formData = new FormData(this);
+
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        // Check if there's an error (either by status code OR by error object)
+        if (!response.ok || data.error) {
+            if (window.toast) {
+                window.toast.error('Error', data.message || data.error?.title || 'Failed to submit form');
+            } else {
+                alert('Error: ' + (data.message || data.error?.title || 'Failed to submit form'));
+            }
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        } else {
+            if (window.toast) {
+                window.toast.success('Success', data.message || 'Evidence {{ "updated" if is_editing else "added" }} successfully');
+            } else {
+                alert('Success: ' + (data.message || 'Evidence {{ "updated" if is_editing else "added" }} successfully'));
+            }
+
+            // Redirect after short delay
+            setTimeout(() => {
+                window.location.href = '{{ url_for("criminal.view_crime", crime_id=crime_data.id) }}';
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        if (window.toast) {
+            window.toast.error('Error', 'Failed to submit form');
+        } else {
+            alert('Error: Failed to submit form');
+        }
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+    }
+});
+</script>
+{% endblock %}

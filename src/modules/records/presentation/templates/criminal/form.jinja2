@@ -1,0 +1,1948 @@
+{% extends 'base.jinja2' %}
+
+{% set person = criminal if criminal else {} %}
+{% set person_images = images if images else [] %}
+{% set is_editing = is_edit if is_edit else false %}
+{% set form_title = 'Edit Criminal' if is_editing else 'Add Criminal' %}
+
+{% block title %}{{ form_title }} | Sentinel{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   FORM HEADER - TRANSPARENT
+   =========================== */
+.form-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.header-icon i {
+    font-size: 28px;
+    color: var(--warning);
+}
+
+.header-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.header-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ===========================
+   FORM CONTAINER - TRANSPARENT
+   =========================== */
+.form-container {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ===========================
+   MODERN STEPPER - CENTERED & IMPROVED
+   =========================== */
+.form-progress {
+    padding: 32px 40px;
+    background: transparent;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    max-width: 800px;
+    width: 100%;
+    gap: 0;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step-circle-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.step-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 3px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 3;
+}
+
+.progress-step.active .step-circle {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    border-color: var(--warning);
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15);
+}
+
+.progress-step.completed .step-circle {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+    transform: scale(1);
+}
+
+.progress-step.completed .step-circle::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    font-size: 14px;
+}
+
+.progress-step.completed .step-circle span {
+    display: none;
+}
+
+/* Connection Line */
+.step-connector {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    right: -50%;
+    height: 3px;
+    background: var(--border);
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+.progress-step:last-child .step-connector {
+    display: none;
+}
+
+.progress-step.completed .step-connector {
+    background: linear-gradient(90deg, var(--success), var(--success));
+}
+
+.progress-step.active .step-connector {
+    background: linear-gradient(90deg, var(--warning) 0%, var(--border) 100%);
+}
+
+.step-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.progress-step.active .step-label {
+    color: var(--warning);
+    font-weight: 700;
+}
+
+.progress-step.completed .step-label {
+    color: var(--success);
+}
+
+/* ===========================
+   FORM BODY - TRANSPARENT
+   =========================== */
+.form-body {
+    padding: 32px;
+}
+
+.form-step {
+    display: none;
+}
+
+.form-step.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.step-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.step-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+/* ===========================
+   FORM SECTIONS
+   =========================== */
+.form-section {
+    margin-bottom: 32px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--warning);
+    font-size: 18px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid.single {
+    grid-template-columns: 1fr;
+}
+
+.form-grid.triple {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* ===========================
+   FORM GROUPS - TRANSPARENT
+   =========================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.required {
+    color: var(--error);
+    font-size: 16px;
+}
+
+.optional {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.form-control {
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: #ffffff !important;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--warning);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    color: #ffffff !important;
+}
+
+/* Fix for autocomplete white background - FORCE WHITE TEXT */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(10, 14, 39, 0.4) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(10, 14, 39, 0.4) !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Force white text for all input states */
+input.form-control,
+textarea.form-control,
+select.form-control {
+    color: #ffffff !important;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+select.form-control:focus {
+    color: #ffffff !important;
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+select.form-control option {
+    background: var(--bg-tertiary);
+    color: #ffffff;
+}
+
+.form-helper {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-helper i {
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* ===========================
+   PHONE INPUT WITH PREFIX
+   =========================== */
+.phone-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.phone-prefix {
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: #ffffff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.phone-input-wrapper .form-control {
+    flex: 1;
+}
+
+.phone-format-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.phone-format-hint.error {
+    color: var(--error);
+}
+
+/* ===========================
+   CHECKBOX & SWITCH
+   =========================== */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.checkbox-group:hover {
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--warning);
+}
+
+.switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 14, 39, 0.6);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    border-radius: 26px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--text-secondary);
+    transition: var(--transition);
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    border-color: var(--warning);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+    background: white;
+}
+
+.checkbox-label {
+    flex: 1;
+}
+
+.checkbox-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.checkbox-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ===========================
+   MAP CONTAINER - TRANSPARENT
+   =========================== */
+.map-container {
+    height: 400px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: 16px;
+}
+
+.map-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.map-controls input {
+    flex: 1;
+}
+
+.btn-map {
+    padding: 12px 20px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+
+.btn-map:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--warning);
+}
+
+.btn-map i {
+    margin-right: 6px;
+}
+
+/* ===========================
+   IMAGE UPLOAD - TRANSPARENT
+   =========================== */
+.image-upload-section {
+    padding: 24px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.image-upload-section:hover {
+    border-color: var(--warning);
+    background: rgba(10, 14, 39, 0.2);
+}
+
+.upload-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+}
+
+.upload-icon i {
+    font-size: 28px;
+    color: var(--warning);
+}
+
+.upload-text {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.image-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.9);
+    backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.preview-remove:hover {
+    background: var(--error);
+    transform: scale(1.1);
+}
+
+.preview-remove i {
+    font-size: 12px;
+}
+
+/* ===========================
+   FORM FOOTER - TRANSPARENT
+   =========================== */
+.form-footer {
+    padding: 24px 32px;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.footer-left {
+    display: flex;
+    gap: 12px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--warning);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-outline:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--warning);
+    color: var(--warning);
+}
+
+/* ===========================
+   LOADING STATE
+   =========================== */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 968px) {
+    .form-grid.triple {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .progress-steps {
+        gap: 0;
+    }
+
+    .step-label {
+        font-size: 11px;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-header {
+        padding: 24px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .form-body {
+        padding: 24px;
+    }
+
+    .form-grid,
+    .form-grid.triple {
+        grid-template-columns: 1fr;
+    }
+
+    .form-progress {
+        padding: 24px 20px;
+    }
+
+    .progress-steps {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 10px;
+    }
+
+    .progress-step {
+        min-width: 80px;
+    }
+
+    .step-label {
+        font-size: 10px;
+    }
+
+    .step-circle {
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+
+    .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-left,
+    .footer-right {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .map-controls {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.list_criminals') }}" class="breadcrumb-item">
+            <span>Criminals</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>{{ form_title }}</span>
+        </span>
+    </div>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-{{ 'edit' if is_editing else 'user-plus' }}"></i>
+            </div>
+            <div class="header-text">
+                <h1>{{ form_title }}</h1>
+                <p>{{ 'Update criminal profile information and records' if is_editing else 'Fill out the form below to add a new criminal to the system. Fields marked with * are required.' }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+        <!-- Progress Steps -->
+        <div class="form-progress">
+            <div class="progress-steps">
+                <div class="progress-step active" data-step="1">
+                    <div class="step-circle-wrapper">
+                        <div class="step-circle">
+                            <span>1</span>
+                        </div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step-label">Personal Info</div>
+                </div>
+
+                <div class="progress-step" data-step="2">
+                    <div class="step-circle-wrapper">
+                        <div class="step-circle">
+                            <span>2</span>
+                        </div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step-label">Physical Details</div>
+                </div>
+
+                <div class="progress-step" data-step="3">
+                    <div class="step-circle-wrapper">
+                        <div class="step-circle">
+                            <span>3</span>
+                        </div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step-label">Criminal Info</div>
+                </div>
+
+                <div class="progress-step" data-step="4">
+                    <div class="step-circle-wrapper">
+                        <div class="step-circle">
+                            <span>4</span>
+                        </div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step-label">Address</div>
+                </div>
+
+                <div class="progress-step" data-step="5">
+                    <div class="step-circle-wrapper">
+                        <div class="step-circle">
+                            <span>5</span>
+                        </div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step-label">Photos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="criminalForm" method="POST" enctype="multipart/form-data"
+              action="{{ url_for('criminal.criminal_form', criminal_id=person.id) if is_editing else url_for('criminal.criminal_form') }}">
+
+            <div class="form-body">
+                <!-- Step 1: Personal Information -->
+                <div class="form-step active" data-step="1">
+                    <h2 class="step-title">Personal Information</h2>
+                    <p class="step-description">Enter the basic personal details of the criminal.</p>
+
+                    <div class="form-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    First Name <span class="required">*</span>
+                                </label>
+                                <input type="text" name="first_name" class="form-control"
+                                       placeholder="Enter first name" required
+                                       value="{{ person.first_name if person.first_name else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Last Name <span class="required">*</span>
+                                </label>
+                                <input type="text" name="last_name" class="form-control"
+                                       placeholder="Enter last name" required
+                                       value="{{ person.last_name if person.last_name else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Date of Birth <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="date" name="date_of_birth" class="form-control"
+                                       value="{{ person.date_of_birth if person.date_of_birth else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Gender <span class="optional">(Optional)</span>
+                                </label>
+                                <select name="gender" class="form-control">
+                                    <option value="">Select gender</option>
+                                    <option value="MALE" {% if person.gender == 'MALE' %}selected{% endif %}>Male</option>
+                                    <option value="FEMALE" {% if person.gender == 'FEMALE' %}selected{% endif %}>Female</option>
+                                    <option value="OTHER" {% if person.gender == 'OTHER' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Phone Number <span class="optional">(Optional)</span>
+                                </label>
+                                <div class="phone-input-wrapper">
+                                    <div class="phone-prefix">+263</div>
+                                    <input type="text" name="phone_number" id="phone_number" class="form-control"
+                                           placeholder="77 123 4567"
+                                           maxlength="12"
+                                           value="{{ person.phone_number.replace('+263', '').strip() if person.phone_number else '' }}">
+                                </div>
+                                <span class="form-helper phone-format-hint" id="phoneHint">
+                                    <i class="fas fa-info-circle"></i>
+                                    Format: 77 123 4567
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Email <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="email" name="email" class="form-control"
+                                       placeholder="email@example.com"
+                                       value="{{ person.email if person.email else '' }}">
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">
+                                    National ID <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="national_id" class="form-control"
+                                       placeholder="63-1234567A12"
+                                       value="{{ person.national_id if person.national_id else '' }}">
+                                <span class="form-helper">
+                                    <i class="fas fa-info-circle"></i>
+                                    Enter the national ID or passport number if known
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Physical Description -->
+                <div class="form-step" data-step="2">
+                    <h2 class="step-title">Physical Description</h2>
+                    <p class="step-description">Provide physical characteristics to help identify the person.</p>
+
+                    <div class="form-section">
+                        <div class="form-grid triple">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Height (cm) <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="number" name="height" class="form-control"
+                                       placeholder="170" step="0.1" min="0"
+                                       value="{{ person.height if person.height else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Weight (kg) <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="number" name="weight" class="form-control"
+                                       placeholder="70" step="0.1" min="0"
+                                       value="{{ person.weight if person.weight else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Hair Color <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="hair_color" class="form-control"
+                                       placeholder="e.g., Black, Brown"
+                                       value="{{ person.hair_color if person.hair_color else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Eye Color <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="eye_color" class="form-control"
+                                       placeholder="e.g., Brown, Blue"
+                                       value="{{ person.eye_color if person.eye_color else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Skin Tone <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="skin_tone" class="form-control"
+                                       placeholder="e.g., Fair, Medium"
+                                       value="{{ person.skin_tone if person.skin_tone else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="form-grid single">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Distinctive Features <span class="optional">(Optional)</span>
+                                </label>
+                                <textarea name="distinctive_features" class="form-control"
+                                          placeholder="Scars, tattoos, birthmarks, or other identifying features..."
+                                          rows="3">{{ person.distinctive_features if person.distinctive_features else '' }}</textarea>
+                                <span class="form-helper">
+                                    <i class="fas fa-info-circle"></i>
+                                    Include any unique physical characteristics
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Additional Description <span class="optional">(Optional)</span>
+                                </label>
+                                <textarea name="description" class="form-control"
+                                          placeholder="Any additional information about the person..."
+                                          rows="3">{{ person.description if person.description else '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Criminal Information -->
+                <div class="form-step" data-step="3">
+                    <h2 class="step-title">Criminal Information</h2>
+                    <p class="step-description">Enter criminal-specific details and threat assessment.</p>
+
+                    <div class="form-section">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Alias/Nickname <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="alias" class="form-control"
+                                       placeholder="Known aliases or street names"
+                                       value="{{ person.alias if person.alias else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Priority Level <span class="optional">(Optional)</span>
+                                </label>
+                                <select name="priority_level" class="form-control">
+                                    <option value="0" {% if person.priority_level == 0 %}selected{% endif %}>0 - None</option>
+                                    <option value="1" {% if person.priority_level == 1 %}selected{% endif %}>1 - Low</option>
+                                    <option value="2" {% if person.priority_level == 2 %}selected{% endif %}>2 - Medium-Low</option>
+                                    <option value="3" {% if person.priority_level == 3 %}selected{% endif %}>3 - Medium</option>
+                                    <option value="4" {% if person.priority_level == 4 %}selected{% endif %}>4 - High</option>
+                                    <option value="5" {% if person.priority_level == 5 %}selected{% endif %}>5 - Critical</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Gang Affiliation <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="gang_affiliation" class="form-control"
+                                       placeholder="Gang or organization name"
+                                       value="{{ person.gang_affiliation if person.gang_affiliation else '' }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Threat Level <span class="optional">(Optional)</span>
+                                </label>
+                                <select name="threat_level" class="form-control">
+                                    <option value="">Select threat level</option>
+                                    <option value="LOW" {% if person.threat_level == 'LOW' %}selected{% endif %}>Low</option>
+                                    <option value="MEDIUM" {% if person.threat_level == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                                    <option value="HIGH" {% if person.threat_level == 'HIGH' %}selected{% endif %}>High</option>
+                                    <option value="EXTREME" {% if person.threat_level == 'EXTREME' %}selected{% endif %}>Extreme</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid single">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Wanted Status
+                                </label>
+                                <div class="checkbox-group" onclick="toggleCheckbox('is_wanted')">
+                                    <label class="switch">
+                                        <input type="checkbox" name="is_wanted" id="is_wanted"
+                                               {% if person.is_wanted %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <div class="checkbox-label">
+                                        <div class="checkbox-title">Mark as Wanted</div>
+                                        <div class="checkbox-description">Enable this if the person is currently wanted by authorities</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Address/Location (Optional) -->
+                <div class="form-step" data-step="4">
+                    <h2 class="step-title">Address Information</h2>
+                    <p class="step-description">Provide address details if known (optional).</p>
+
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Location Details
+                        </h3>
+
+                        <!-- Map Container -->
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Select Location on Map
+                            </label>
+                            <div id="addressMap" class="map-container"></div>
+                            <div class="map-controls">
+                                <input type="text" id="searchLocation" class="form-control"
+                                       placeholder="Search for a location (e.g., Harare CBD, Zimbabwe)">
+                                <button type="button" class="btn-map" onclick="searchLocationOnMap()">
+                                    <i class="fas fa-search"></i>
+                                    Search
+                                </button>
+                                <button type="button" class="btn-map" onclick="getCurrentLocation()">
+                                    <i class="fas fa-crosshairs"></i>
+                                    My Location
+                                </button>
+                            </div>
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Click on the map to select a location or search for an address
+                            </span>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Latitude <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="number" name="latitude" id="latitude" class="form-control"
+                                       placeholder="-17.8292" step="any" readonly>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Longitude <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="number" name="longitude" id="longitude" class="form-control"
+                                       placeholder="31.0522" step="any" readonly>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">
+                                    Address <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="address" id="address" class="form-control"
+                                       placeholder="Street address">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    City <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="city" id="city" class="form-control"
+                                       placeholder="Harare">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    State/Province <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="state" id="state" class="form-control"
+                                       placeholder="Harare Province">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Country <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="country" id="country" class="form-control"
+                                       placeholder="Zimbabwe">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Postal Code <span class="optional">(Optional)</span>
+                                </label>
+                                <input type="text" name="postal_code" class="form-control"
+                                       placeholder="00000000" value="00000000">
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label class="form-label">
+                                    Location Description <span class="optional">(Optional)</span>
+                                </label>
+                                <textarea name="location_description" class="form-control"
+                                          placeholder="Additional details about the location..."
+                                          rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Photos -->
+                <div class="form-step" data-step="5">
+                    <h2 class="step-title">Upload Photos</h2>
+                    <p class="step-description">Add photos of the criminal to help with identification.</p>
+
+                    <div class="form-section">
+                        <label class="form-label" style="margin-bottom: 16px;">
+                            Photos <span class="optional">(Optional)</span>
+                        </label>
+
+                        <div class="image-upload-section" onclick="document.getElementById('imageInput').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">Click to upload photos</div>
+                            <div class="upload-hint">PNG, JPG, JPEG or GIF (Max 10MB per file)</div>
+                        </div>
+
+                        <input type="file" id="imageInput" name="images" accept="image/*" multiple style="display: none;" onchange="previewImages(event)">
+
+                        <div class="image-preview-grid" id="imagePreviewGrid"></div>
+
+                        {% if is_editing and person_images and person_images|length > 0 %}
+                        <div style="margin-top: 24px;">
+                            <h4 style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">
+                                Existing Photos
+                            </h4>
+                            <div class="image-preview-grid">
+                                {% for image in person_images %}
+                                <div class="preview-item">
+                                    <img src="{{ image.image_path }}" alt="Photo {{ loop.index }}">
+                                    {% if image.is_primary %}
+                                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 6px; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); color: white; font-size: 10px; font-weight: 600; text-align: center;">
+                                        Primary
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Footer -->
+            <div class="form-footer">
+                <div class="footer-left">
+                    <button type="button" class="btn btn-outline" id="prevBtn" onclick="changeStep(-1)" style="display: none;">
+                        <i class="fas fa-arrow-left"></i>
+                        Previous
+                    </button>
+                </div>
+                <div class="footer-right">
+                    <a href="{{ url_for('criminal.list_criminals') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </a>
+                    <button type="button" class="btn btn-primary" id="nextBtn" onclick="changeStep(1)">
+                        Next
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+                        <i class="fas fa-save"></i>
+                        {{ 'Update Criminal' if is_editing else 'Add Criminal' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+let uploadedImages = [];
+let addressMap;
+let addressMarker;
+let isSubmitting = false; // ← CRITICAL: Prevents duplicate form submissions
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    updateStepDisplay();
+    initializeAddressMap();
+    initializePhoneFormatting();
+});
+
+// Phone number formatting function
+function initializePhoneFormatting() {
+    const input = document.getElementById('phone_number');
+    const hint = document.getElementById('phoneHint');
+
+    if (input) {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value;
+
+            // Remove all non-digit characters
+            let cleaned = value.replace(/\D/g, '');
+
+            // Format: 77 123 4567
+            let formatted = '';
+
+            if (cleaned.length > 0) {
+                formatted += cleaned.substring(0, 2);
+            }
+            if (cleaned.length > 2) {
+                formatted += ' ' + cleaned.substring(2, 5);
+            }
+            if (cleaned.length > 5) {
+                formatted += ' ' + cleaned.substring(5, 9);
+            }
+
+            e.target.value = formatted;
+
+            // Validate format
+            const isValid = /^\d{2}\s\d{3}\s\d{4}$/.test(formatted);
+
+            if (hint) {
+                if (cleaned.length > 0 && !isValid && cleaned.length >= 9) {
+                    hint.classList.add('error');
+                    hint.innerHTML = '<i class="fas fa-exclamation-circle"></i> Invalid format. Use: 77 123 4567';
+                } else {
+                    hint.classList.remove('error');
+                    hint.innerHTML = '<i class="fas fa-info-circle"></i> Format: 77 123 4567';
+                }
+            }
+        });
+    }
+}
+
+// Toggle checkbox helper
+function toggleCheckbox(id) {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+    }
+}
+
+// Initialize Address Map
+function initializeAddressMap() {
+    // Default center (Harare, Zimbabwe)
+    const defaultLat = -17.8292;
+    const defaultLng = 31.0522;
+
+    // Initialize map
+    addressMap = L.map('addressMap').setView([defaultLat, defaultLng], 13);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(addressMap);
+
+    // Add click event to map
+    addressMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // Remove existing marker if any
+        if (addressMarker) {
+            addressMap.removeLayer(addressMarker);
+        }
+
+        // Add new marker
+        addressMarker = L.marker([lat, lng], {
+            draggable: true
+        }).addTo(addressMap);
+
+        // Update form fields
+        updateLocationFields(lat, lng);
+
+        // Reverse geocode to get address
+        reverseGeocode(lat, lng);
+
+        // Add drag event
+        addressMarker.on('dragend', function(e) {
+            const position = addressMarker.getLatLng();
+            updateLocationFields(position.lat, position.lng);
+            reverseGeocode(position.lat, position.lng);
+        });
+    });
+}
+
+// Update location input fields
+function updateLocationFields(lat, lng) {
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+}
+
+// Reverse geocode location
+function reverseGeocode(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.address) {
+                document.getElementById('address').value = data.display_name || '';
+                document.getElementById('city').value = data.address.city || data.address.town || data.address.village || '';
+                document.getElementById('state').value = data.address.state || data.address.province || '';
+                document.getElementById('country').value = data.address.country || '';
+            }
+        })
+        .catch(error => {
+            console.error('Reverse geocoding failed:', error);
+        });
+}
+
+// Search location on map
+function searchLocationOnMap() {
+    const searchQuery = document.getElementById('searchLocation').value;
+
+    if (!searchQuery.trim()) {
+        if (window.toast) {
+            window.toast.warning('Input Required', 'Please enter a location to search');
+        } else {
+            alert('Please enter a location to search');
+        }
+        return;
+    }
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const result = data[0];
+                const lat = parseFloat(result.lat);
+                const lng = parseFloat(result.lon);
+
+                addressMap.setView([lat, lng], 15);
+
+                if (addressMarker) {
+                    addressMap.removeLayer(addressMarker);
+                }
+
+                addressMarker = L.marker([lat, lng], {
+                    draggable: true
+                }).addTo(addressMap);
+
+                updateLocationFields(lat, lng);
+                reverseGeocode(lat, lng);
+
+                addressMarker.on('dragend', function(e) {
+                    const position = addressMarker.getLatLng();
+                    updateLocationFields(position.lat, position.lng);
+                    reverseGeocode(position.lat, position.lng);
+                });
+
+                if (window.toast) {
+                    window.toast.success('Location Found', 'Click on the map to adjust the exact position');
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.error('Not Found', 'Location not found. Try a different search term.');
+                } else {
+                    alert('Location not found. Try a different search term.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Geocoding failed:', error);
+            if (window.toast) {
+                window.toast.error('Search Failed', 'Failed to search location. Please try again.');
+            } else {
+                alert('Failed to search location. Please try again.');
+            }
+        });
+}
+
+// Get current location
+function getCurrentLocation() {
+    if (!navigator.geolocation) {
+        if (window.toast) {
+            window.toast.error('Not Supported', 'Geolocation is not supported by your browser');
+        } else {
+            alert('Geolocation is not supported by your browser');
+        }
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            addressMap.setView([lat, lng], 15);
+
+            if (addressMarker) {
+                addressMap.removeLayer(addressMarker);
+            }
+
+            addressMarker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(addressMap);
+
+            updateLocationFields(lat, lng);
+            reverseGeocode(lat, lng);
+
+            addressMarker.on('dragend', function(e) {
+                const position = addressMarker.getLatLng();
+                updateLocationFields(position.lat, position.lng);
+                reverseGeocode(position.lat, position.lng);
+            });
+
+            if (window.toast) {
+                window.toast.success('Location Found', 'Your current location has been set');
+            }
+        },
+        function(error) {
+            console.error('Geolocation error:', error);
+            if (window.toast) {
+                window.toast.error('Location Error', 'Unable to retrieve your location. Please check your browser settings.');
+            } else {
+                alert('Unable to retrieve your location. Please check your browser settings.');
+            }
+        }
+    );
+}
+
+// Change step function
+function changeStep(direction) {
+    // Validate current step before moving forward
+    if (direction === 1 && !validateStep(currentStep)) {
+        return;
+    }
+
+    // Update current step
+    currentStep += direction;
+
+    // Boundary checks
+    if (currentStep < 1) currentStep = 1;
+    if (currentStep > totalSteps) currentStep = totalSteps;
+
+    updateStepDisplay();
+
+    // Refresh map when entering address step
+    if (currentStep === 4 && addressMap) {
+        setTimeout(function() {
+            addressMap.invalidateSize();
+        }, 100);
+    }
+}
+
+// Validate step
+function validateStep(step) {
+    const currentStepElement = document.querySelector(`.form-step[data-step="${step}"]`);
+    const requiredFields = currentStepElement.querySelectorAll('[required]');
+
+    let isValid = true;
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.style.borderColor = 'var(--error)';
+
+            // Remove error styling after user starts typing
+            field.addEventListener('input', function() {
+                this.style.borderColor = '';
+            }, { once: true });
+        }
+    });
+
+    if (!isValid) {
+        if (window.toast) {
+            window.toast.warning('Validation Error', 'Please fill in all required fields');
+        } else {
+            alert('Please fill in all required fields');
+        }
+    }
+
+    return isValid;
+}
+
+// Update step display
+function updateStepDisplay() {
+    // Update step visibility
+    document.querySelectorAll('.form-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.querySelector(`.form-step[data-step="${currentStep}"]`).classList.add('active');
+
+    // Update progress steps
+    document.querySelectorAll('.progress-step').forEach((step, index) => {
+        step.classList.remove('active', 'completed');
+        if (index + 1 < currentStep) {
+            step.classList.add('completed');
+        } else if (index + 1 === currentStep) {
+            step.classList.add('active');
+        }
+    });
+
+    // Update buttons
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (currentStep === 1) {
+        prevBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = 'inline-flex';
+    }
+
+    if (currentStep === totalSteps) {
+        nextBtn.style.display = 'none';
+        submitBtn.style.display = 'inline-flex';
+    } else {
+        nextBtn.style.display = 'inline-flex';
+        submitBtn.style.display = 'none';
+    }
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Image preview function
+function previewImages(event) {
+    const files = Array.from(event.target.files);
+    const previewGrid = document.getElementById('imagePreviewGrid');
+
+    files.forEach(file => {
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            if (window.toast) {
+                window.toast.warning('File Too Large', `${file.name} exceeds 10MB limit`);
+            } else {
+                alert(`${file.name} exceeds 10MB limit`);
+            }
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.match('image.*')) {
+            if (window.toast) {
+                window.toast.warning('Invalid File', `${file.name} is not an image`);
+            } else {
+                alert(`${file.name} is not an image`);
+            }
+            return;
+        }
+
+        uploadedImages.push(file);
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            previewItem.innerHTML = `
+                <img src="${e.target.result}" alt="${file.name}">
+                <button type="button" class="preview-remove" onclick="removeImage(${uploadedImages.length - 1})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewGrid.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Remove image from preview
+function removeImage(index) {
+    uploadedImages.splice(index, 1);
+
+    // Rebuild preview grid
+    const previewGrid = document.getElementById('imagePreviewGrid');
+    previewGrid.innerHTML = '';
+
+    uploadedImages.forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            previewItem.innerHTML = `
+                <img src="${e.target.result}" alt="${file.name}">
+                <button type="button" class="preview-remove" onclick="removeImage(${i})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            previewGrid.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Form submission with duplicate prevention
+// Form submission with duplicate prevention
+document.getElementById('criminalForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // CRITICAL: Check if already submitting (prevents double-click/double-submit)
+    if (isSubmitting) {
+        console.log('Form already submitting, ignoring duplicate submission');
+        return;
+    }
+
+    // Validate final step
+    if (!validateStep(currentStep)) {
+        return;
+    }
+
+    // Set flag IMMEDIATELY before any async operations
+    isSubmitting = true;
+
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+    const formData = new FormData(this);
+
+    // Process phone number - add +263 prefix
+    const phoneNumber = document.getElementById('phone_number').value.trim();
+    if (phoneNumber) {
+        formData.set('phone_number', '+263' + phoneNumber.replace(/\s/g, ''));
+    }
+
+    // Clear the images field and re-add only the new uploaded images
+    formData.delete('images');
+    uploadedImages.forEach(file => {
+        formData.append('images', file);
+    });
+
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        // DEBUG: Log the response to see what's being returned
+        console.log('=== FORM SUBMISSION RESPONSE ===');
+        console.log('Status:', response.status);
+        console.log('OK:', response.ok);
+        console.log('Full response data:', data);
+        console.log('Has error field:', !!data.error);
+        console.log('Has value field:', !!data.value);
+        console.log('Message:', data.message);
+        console.log('================================');
+
+        // Check for HTTP errors first
+        if (!response.ok) {
+            // Use the error message from response if available
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               `Server error: ${response.status}`;
+            throw new Error(errorMessage);
+        }
+
+        // Check for application-level errors using the error field
+        if (data.error) {
+            const errorMessage = data.message ||
+                               (data.error.details && data.error.details[0]) ||
+                               'Operation failed';
+            throw new Error(errorMessage);
+        }
+
+        // SUCCESS - show message and redirect
+        console.log('Form submission successful!');
+
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Criminal {{ "updated" if is_editing else "added" }} successfully');
+        } else {
+            alert('Success: ' + (data.message || 'Criminal {{ "updated" if is_editing else "added" }} successfully'));
+        }
+
+        // Redirect after short delay
+        setTimeout(() => {
+            if (data.value && data.value.redirect_url) {
+                window.location.href = data.value.redirect_url;
+            } else {
+                window.location.href = '{{ url_for("criminal.list_criminals") }}';
+            }
+        }, 1500);
+
+    } catch (error) {
+        console.error('Submission error:', error);
+
+        // Reset submission flag on error
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to submit form');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to submit form'));
+        }
+    }
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft' && currentStep > 1) {
+        changeStep(-1);
+    } else if (e.key === 'ArrowRight' && currentStep < totalSteps) {
+        if (validateStep(currentStep)) {
+            changeStep(1);
+        }
+    }
+});
+
+// Allow Enter key in search input to trigger search
+document.getElementById('searchLocation').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        searchLocationOnMap();
+    }
+});
+</script>
+{% endblock %}

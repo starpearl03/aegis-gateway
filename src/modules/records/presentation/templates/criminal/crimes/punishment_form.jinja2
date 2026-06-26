@@ -1,0 +1,747 @@
+{% extends 'base.jinja2' %}
+
+{% set punishment_data = punishment if punishment else {} %}
+{% set crime_data = crime if crime else {} %}
+{% set is_editing = is_edit if is_edit else false %}
+{% set form_title = 'Edit Punishment' if is_editing else 'Add Punishment' %}
+
+{% block title %}{{ form_title }} | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   FORM HEADER - TRANSPARENT
+   =========================== */
+.form-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.header-icon i {
+    font-size: 28px;
+    color: #8b5cf6;
+}
+
+.header-text h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.header-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ===========================
+   CRIME INFO BANNER
+   =========================== */
+.crime-banner {
+    background: rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.crime-banner i {
+    font-size: 20px;
+    color: var(--info);
+}
+
+.crime-banner-text {
+    flex: 1;
+}
+
+.crime-banner-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.crime-banner-name {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.crime-banner-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* ===========================
+   FORM CONTAINER - TRANSPARENT
+   =========================== */
+.form-container {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ===========================
+   FORM BODY - TRANSPARENT
+   =========================== */
+.form-body {
+    padding: 32px;
+}
+
+/* ===========================
+   FORM SECTIONS
+   =========================== */
+.form-section {
+    margin-bottom: 32px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: #8b5cf6;
+    font-size: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid.single {
+    grid-template-columns: 1fr;
+}
+
+/* ===========================
+   FORM GROUPS - TRANSPARENT
+   =========================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.required {
+    color: var(--error);
+    font-size: 16px;
+}
+
+.optional {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.form-control {
+    padding: 12px 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: #ffffff !important;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(10, 14, 39, 0.6);
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    color: #ffffff !important;
+}
+
+/* Fix for autocomplete white background - FORCE WHITE TEXT */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(10, 14, 39, 0.4) inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background-color: rgba(10, 14, 39, 0.4) !important;
+    color: #ffffff !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* Force white text for all input states */
+input.form-control,
+textarea.form-control,
+select.form-control {
+    color: #ffffff !important;
+}
+
+input.form-control:focus,
+textarea.form-control:focus,
+select.form-control:focus {
+    color: #ffffff !important;
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+select.form-control option {
+    background: var(--bg-tertiary);
+    color: #ffffff;
+}
+
+.form-helper {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.form-helper i {
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+/* ===========================
+   CONDITIONAL FIELDS
+   =========================== */
+.conditional-field {
+    display: none;
+}
+
+.conditional-field.active {
+    display: block;
+}
+
+/* ===========================
+   FORM FOOTER - TRANSPARENT
+   =========================== */
+.form-footer {
+    padding: 24px 32px;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.footer-left {
+    display: flex;
+    gap: 12px;
+}
+
+.footer-right {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: #8b5cf6;
+}
+
+/* ===========================
+   LOADING STATE
+   =========================== */
+.btn.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+    .form-header {
+        padding: 24px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .form-body {
+        padding: 24px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-left,
+    .footer-right {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.list_crimes') }}" class="breadcrumb-item">
+            <span>Crime Cases</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.view_crime', crime_id=crime_data.id) }}" class="breadcrumb-item">
+            <span>Case #{{ crime_data.case_number }}</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>{{ form_title }}</span>
+        </span>
+    </div>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <div class="header-text">
+                <h1>{{ form_title }}</h1>
+                <p>{{ 'Update punishment information and status' if is_editing else 'Add a punishment or sentence to this crime case. Fields marked with * are required.' }}</p>
+            </div>
+        </div>
+
+        <!-- Crime Banner -->
+        <div class="crime-banner">
+            <i class="fas fa-gavel"></i>
+            <div class="crime-banner-text">
+                <div class="crime-banner-title">Crime Case</div>
+                <div class="crime-banner-name">{{ crime_data.crime_type }}</div>
+                <div class="crime-banner-meta">Case #{{ crime_data.case_number }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="form-container">
+        <!-- Form -->
+        <form id="punishmentForm" method="POST"
+              action="{{ url_for('criminal.punishment_form', crime_id=crime_data.id, punishment_id=punishment_data.id) if is_editing else url_for('criminal.punishment_form', crime_id=crime_data.id) }}">
+
+            <div class="form-body">
+                <!-- Punishment Information -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-gavel"></i>
+                        Punishment Information
+                    </h3>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                Punishment Type <span class="required">*</span>
+                            </label>
+                            <select name="type" id="punishmentType" class="form-control" required onchange="toggleConditionalFields()">
+                                <option value="">Select punishment type</option>
+                                <option value="jail" {% if punishment_data.type == 'jail' %}selected{% endif %}>Jail</option>
+                                <option value="prison" {% if punishment_data.type == 'prison' %}selected{% endif %}>Prison</option>
+                                <option value="fine" {% if punishment_data.type == 'fine' %}selected{% endif %}>Fine</option>
+                                <option value="probation" {% if punishment_data.type == 'probation' %}selected{% endif %}>Probation</option>
+                                <option value="community_service" {% if punishment_data.type == 'community_service' %}selected{% endif %}>Community Service</option>
+                                <option value="suspended_sentence" {% if punishment_data.type == 'suspended_sentence' %}selected{% endif %}>Suspended Sentence</option>
+                                <option value="acquitted" {% if punishment_data.type == 'acquitted' %}selected{% endif %}>Acquitted</option>
+                                <option value="death_penalty" {% if punishment_data.type == 'death_penalty' %}selected{% endif %}>Death Penalty</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Status <span class="required">*</span>
+                            </label>
+                            <select name="status" class="form-control" required>
+                                <option value="">Select status</option>
+                                <option value="pending" {% if punishment_data.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="active" {% if punishment_data.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="completed" {% if punishment_data.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="suspended" {% if punishment_data.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                                <option value="revoked" {% if punishment_data.status == 'revoked' %}selected{% endif %}>Revoked</option>
+                                <option value="overdue" {% if punishment_data.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                                <option value="partially_paid" {% if punishment_data.status == 'partially_paid' %}selected{% endif %}>Partially Paid</option>
+                            </select>
+                        </div>
+
+                        <!-- Fine Amount Field (conditional) -->
+                        <div class="form-group conditional-field" id="amountField" data-types="fine">
+                            <label class="form-label">
+                                Amount ($) <span class="required">*</span>
+                            </label>
+                            <input type="number" name="amount" id="amountInput" class="form-control"
+                                   placeholder="0.00" step="0.01" min="0"
+                                   value="{{ punishment_data.amount if punishment_data.amount else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Total fine amount to be paid
+                            </span>
+                        </div>
+
+                        <!-- Amount Paid Field (conditional) -->
+                        <div class="form-group conditional-field" id="amountPaidField" data-types="fine">
+                            <label class="form-label">
+                                Amount Paid ($) <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="number" name="amount_paid" class="form-control"
+                                   placeholder="0.00" step="0.01" min="0"
+                                   value="{{ punishment_data.amount_paid if punishment_data.amount_paid else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Amount already paid
+                            </span>
+                        </div>
+
+                        <!-- Duration Field (conditional) -->
+                        <div class="form-group conditional-field" id="durationField" data-types="jail,prison,community_service,probation">
+                            <label class="form-label">
+                                Duration (days) <span class="required">*</span>
+                            </label>
+                            <input type="number" name="duration" id="durationInput" class="form-control"
+                                   placeholder="30" min="1"
+                                   value="{{ punishment_data.duration if punishment_data.duration else '' }}">
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Length of punishment in days
+                            </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Start Date <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="date" name="start_date" class="form-control"
+                                   value="{{ punishment_data.start_date[:10] if punishment_data.start_date else '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                End Date <span class="optional">(Optional)</span>
+                            </label>
+                            <input type="date" name="end_date" class="form-control"
+                                   value="{{ punishment_data.end_date[:10] if punishment_data.end_date else '' }}">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="form-label">
+                                Details <span class="optional">(Optional)</span>
+                            </label>
+                            <textarea name="details" class="form-control"
+                                      placeholder="Additional details about the punishment..."
+                                      rows="5">{{ punishment_data.details if punishment_data.details else '' }}</textarea>
+                            <span class="form-helper">
+                                <i class="fas fa-info-circle"></i>
+                                Provide any additional information, conditions, or special terms
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Footer -->
+            <div class="form-footer">
+                <div class="footer-left"></div>
+                <div class="footer-right">
+                    <a href="{{ url_for('criminal.view_crime', crime_id=crime_data.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save"></i>
+                        {{ 'Update Punishment' if is_editing else 'Add Punishment' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Toggle conditional fields based on punishment type
+function toggleConditionalFields() {
+    const punishmentType = document.getElementById('punishmentType').value;
+    const conditionalFields = document.querySelectorAll('.conditional-field');
+
+    // Hide all conditional fields
+    conditionalFields.forEach(field => {
+        field.classList.remove('active');
+        const input = field.querySelector('input');
+        if (input) {
+            input.removeAttribute('required');
+        }
+    });
+
+    // Show relevant fields based on type
+    if (punishmentType) {
+        conditionalFields.forEach(field => {
+            const types = field.getAttribute('data-types');
+            if (types && types.split(',').includes(punishmentType)) {
+                field.classList.add('active');
+
+                // Add required attribute to specific fields
+                const input = field.querySelector('input');
+                if (input && (field.id === 'amountField' || field.id === 'durationField')) {
+                    input.setAttribute('required', 'required');
+                }
+            }
+        });
+    }
+}
+
+// Initialize conditional fields on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleConditionalFields();
+});
+
+// Form submission
+document.getElementById('punishmentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+
+    const formData = new FormData(this);
+
+    // Remove empty optional fields based on punishment type
+    const punishmentType = formData.get('type');
+
+    // If not fine, remove amount fields
+    if (punishmentType !== 'fine') {
+        formData.delete('amount');
+        formData.delete('amount_paid');
+    }
+
+    // If not jail/prison/community_service/probation, remove duration
+    if (!['jail', 'prison', 'community_service', 'probation'].includes(punishmentType)) {
+        formData.delete('duration');
+    }
+
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            if (window.toast) {
+                window.toast.error('Error', data.message || 'Failed to submit form');
+            } else {
+                alert('Error: ' + (data.message || 'Failed to submit form'));
+            }
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        } else {
+            if (window.toast) {
+                window.toast.success('Success', data.message || 'Punishment {{ "updated" if is_editing else "added" }} successfully');
+            } else {
+                alert('Success: ' + (data.message || 'Punishment {{ "updated" if is_editing else "added" }} successfully'));
+            }
+
+            // Redirect after short delay
+            setTimeout(() => {
+                window.location.href = '{{ url_for("criminal.view_crime", crime_id=crime_data.id) }}';
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        if (window.toast) {
+            window.toast.error('Error', 'Failed to submit form');
+        } else {
+            alert('Error: Failed to submit form');
+        }
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+    }
+});
+</script>
+{% endblock %}

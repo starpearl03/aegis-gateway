@@ -1,0 +1,926 @@
+{% extends 'base.jinja2' %}
+
+{% set crime_data = crime if crime else {} %}
+{% set crime_victims = victims if victims else [] %}
+{% set crime_punishments = punishments if punishments else [] %}
+{% set crime_evidence = evidence if evidence else [] %}
+
+{% block title %}Case #{{ crime_data.case_number }} | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   CASE HEADER - TRANSPARENT
+   =========================== */
+.case-header {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.case-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.case-content {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+}
+
+.case-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--info);
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    box-shadow: var(--shadow-lg);
+}
+
+.case-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.case-number {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-family: monospace;
+    margin-bottom: 8px;
+}
+
+.case-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.case-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.badge {
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge.open {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge.under-investigation,
+.badge.under_investigation {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge.closed {
+    background: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.badge.solved {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.case-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.meta-value {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* ===========================
+   CONTENT GRID
+   =========================== */
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.content-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.content-section.full-width {
+    grid-column: 1 / -1;
+}
+
+.section-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--info);
+    font-size: 20px;
+}
+
+.section-body {
+    padding: 24px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.description-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    padding: 16px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+/* ===========================
+   LISTS
+   =========================== */
+.items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.item-card {
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    transition: var(--transition);
+}
+
+.item-card:hover {
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--info);
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.item-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.item-title i {
+    font-size: 16px;
+    color: var(--info);
+}
+
+.item-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.item-badge.active {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.item-badge.completed {
+    background: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+}
+
+.item-badge.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.item-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.item-detail strong {
+    color: var(--text-primary);
+}
+
+.no-items {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.no-items i {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.no-items p {
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+/* ===========================
+   BUTTONS
+   =========================== */
+.btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--info), #2563eb);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--info);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.btn-sm i {
+    font-size: 14px;
+}
+
+.btn-danger {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: var(--error);
+    color: white;
+    border-color: var(--error);
+}
+
+/* ===========================
+   ACTION BUTTONS
+   =========================== */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 1200px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .content-section {
+        grid-column: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .case-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .case-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 28px;
+    }
+
+    .case-title {
+        font-size: 24px;
+    }
+
+    .case-badges {
+        justify-content: center;
+    }
+
+    .case-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('criminal.list_crimes') }}" class="breadcrumb-item">
+            <span>Crime Cases</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>Case #{{ crime_data.case_number }}</span>
+        </span>
+    </div>
+
+    <!-- Case Header -->
+    <div class="case-header">
+        <div class="case-content">
+            <div class="case-icon">
+                <i class="fas fa-gavel"></i>
+            </div>
+
+            <div class="case-info">
+                <div class="case-number">Case #{{ crime_data.case_number }}</div>
+                <h1 class="case-title">{{ crime_data.crime_type }}</h1>
+
+                <div class="case-badges">
+                    <span class="badge {{ crime_data.status|lower|replace('_', '-') if crime_data.status else 'open' }}">
+                        <i class="fas fa-{{ 'check-circle' if crime_data.status == 'SOLVED' else 'exclamation-circle' if crime_data.status == 'OPEN' else 'hourglass-half' }}"></i>
+                        {{ crime_data.status|replace('_', ' ') if crime_data.status else 'OPEN' }}
+                    </span>
+                </div>
+
+                <div class="case-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">Date Committed</div>
+                        <div class="meta-value">{{ crime_data.date_committed[:10] if crime_data.date_committed else 'Unknown' }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">Date Reported</div>
+                        <div class="meta-value">{{ crime_data.date_reported[:10] if crime_data.date_reported else 'Unknown' }}</div>
+                    </div>
+                    {% if crime_data.location and crime_data.location.city %}
+                    <div class="meta-item">
+                        <div class="meta-label">Location</div>
+                        <div class="meta-value">{{ crime_data.location.city }}{% if crime_data.location.state %}, {{ crime_data.location.state }}{% endif %}</div>
+                    </div>
+                    {% endif %}
+                    {% if crime_data.assigned_officer_id %}
+                    <div class="meta-item">
+                        <div class="meta-label">Assigned Officer</div>
+                        <div class="meta-value">{{ crime_data.assigned_officer_id[:16] }}...</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+        <!-- Crime Details -->
+        <div class="content-section full-width">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-file-alt"></i>
+                    Crime Details
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Crime Type</div>
+                        <div class="info-value">{{ crime_data.crime_type }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Case Number</div>
+                        <div class="info-value">{{ crime_data.case_number }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">{{ crime_data.status|replace('_', ' ')|title if crime_data.status else 'Open' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Criminal ID</div>
+                        <div class="info-value">
+                            <a href="{{ url_for('criminal.view_criminal', criminal_id=crime_data.criminal_id) }}" style="color: var(--info); text-decoration: none;">
+                                {{ crime_data.criminal_id[:16] }}...
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if crime_data.description %}
+                <div style="margin-top: 20px;">
+                    <div class="info-label" style="margin-bottom: 8px;">Description</div>
+                    <div class="description-text">{{ crime_data.description }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Location -->
+        {% if crime_data.location %}
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-map-marker-alt"></i>
+                    Location
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="info-grid">
+                    {% if crime_data.location.address %}
+                    <div class="info-item">
+                        <div class="info-label">Address</div>
+                        <div class="info-value">{{ crime_data.location.address }}</div>
+                    </div>
+                    {% endif %}
+                    {% if crime_data.location.city %}
+                    <div class="info-item">
+                        <div class="info-label">City</div>
+                        <div class="info-value">{{ crime_data.location.city }}</div>
+                    </div>
+                    {% endif %}
+                    {% if crime_data.location.state %}
+                    <div class="info-item">
+                        <div class="info-label">State/Province</div>
+                        <div class="info-value">{{ crime_data.location.state }}</div>
+                    </div>
+                    {% endif %}
+                    {% if crime_data.location.country %}
+                    <div class="info-item">
+                        <div class="info-label">Country</div>
+                        <div class="info-value">{{ crime_data.location.country }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="info-item">
+                        <div class="info-label">Coordinates</div>
+                        <div class="info-value">{{ crime_data.location.latitude }}, {{ crime_data.location.longitude }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Timestamps -->
+        <div class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-clock"></i>
+                    Timestamps
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Created At</div>
+                        <div class="info-value">{{ crime_data.created_at[:19]|replace('T', ' ') if crime_data.created_at else 'Unknown' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Updated</div>
+                        <div class="info-value">{{ crime_data.updated_at[:19]|replace('T', ' ') if crime_data.updated_at else 'Unknown' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Victims -->
+        <div class="content-section full-width">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-user-injured"></i>
+                    Victims ({{ crime_victims|length }})
+                </h2>
+                <a href="{{ url_for('criminal.victim_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i>
+                    Add Victim
+                </a>
+            </div>
+            <div class="section-body">
+                {% if crime_victims and crime_victims|length > 0 %}
+                <div class="items-list">
+                    {% for victim in crime_victims %}
+                    <div class="item-card">
+                        <div class="item-header">
+                            <div class="item-title">
+                                <i class="fas fa-user"></i>
+                                Victim #{{ loop.index }}
+                            </div>
+                        </div>
+                        <div class="item-body">
+                            <div class="item-detail">
+                                <strong>Person ID:</strong> {{ victim.person_id }}
+                            </div>
+                            {% if victim.injury_description %}
+                            <div class="item-detail">
+                                <strong>Injuries:</strong> {{ victim.injury_description }}
+                            </div>
+                            {% endif %}
+                            {% if victim.medical_report_path %}
+                            <div class="item-detail">
+                                <strong>Medical Report:</strong> Available
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-items">
+                    <i class="fas fa-user-injured"></i>
+                    <p>No victims recorded for this crime</p>
+                    <a href="{{ url_for('criminal.victim_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i>
+                        Add First Victim
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Punishments -->
+        <div class="content-section full-width">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-balance-scale"></i>
+                    Punishments ({{ crime_punishments|length }})
+                </h2>
+                <a href="{{ url_for('criminal.punishment_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i>
+                    Add Punishment
+                </a>
+            </div>
+            <div class="section-body">
+                {% if crime_punishments and crime_punishments|length > 0 %}
+                <div class="items-list">
+                    {% for punishment in crime_punishments %}
+                    <div class="item-card">
+                        <div class="item-header">
+                            <div class="item-title">
+                                <i class="fas fa-gavel"></i>
+                                {{ punishment.type|replace('_', ' ')|title }}
+                            </div>
+                            <span class="item-badge {{ 'active' if punishment.status == 'ACTIVE' else 'completed' if punishment.status == 'COMPLETED' else 'pending' }}">
+                                {{ punishment.status|replace('_', ' ')|title }}
+                            </span>
+                        </div>
+                        <div class="item-body">
+                            {% if punishment.amount %}
+                            <div class="item-detail">
+                                <strong>Amount:</strong> ${{ punishment.amount }}
+                                {% if punishment.amount_paid %} (Paid: ${{ punishment.amount_paid }}){% endif %}
+                            </div>
+                            {% endif %}
+                            {% if punishment.duration %}
+                            <div class="item-detail">
+                                <strong>Duration:</strong> {{ punishment.duration }} days
+                            </div>
+                            {% endif %}
+                            {% if punishment.start_date %}
+                            <div class="item-detail">
+                                <strong>Start Date:</strong> {{ punishment.start_date[:10] }}
+                            </div>
+                            {% endif %}
+                            {% if punishment.end_date %}
+                            <div class="item-detail">
+                                <strong>End Date:</strong> {{ punishment.end_date[:10] }}
+                            </div>
+                            {% endif %}
+                            {% if punishment.details %}
+                            <div class="item-detail">
+                                <strong>Details:</strong> {{ punishment.details }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-items">
+                    <i class="fas fa-balance-scale"></i>
+                    <p>No punishments assigned for this crime</p>
+                    <a href="{{ url_for('criminal.punishment_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i>
+                        Add First Punishment
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Evidence -->
+        <div class="content-section full-width">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-folder-open"></i>
+                    Evidence ({{ crime_evidence|length }})
+                </h2>
+                <a href="{{ url_for('criminal.evidence_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i>
+                    Add Evidence
+                </a>
+            </div>
+            <div class="section-body">
+                {% if crime_evidence and crime_evidence|length > 0 %}
+                <div class="items-list">
+                    {% for item in crime_evidence %}
+                    <div class="item-card">
+                        <div class="item-header">
+                            <div class="item-title">
+                                <i class="fas fa-file"></i>
+                                {{ item.type|replace('_', ' ')|title }}
+                            </div>
+                        </div>
+                        <div class="item-body">
+                            <div class="item-detail">
+                                <strong>Description:</strong> {{ item.description }}
+                            </div>
+                            {% if item.collected_by %}
+                            <div class="item-detail">
+                                <strong>Collected By:</strong> {{ item.collected_by }}
+                            </div>
+                            {% endif %}
+                            {% if item.collected_date %}
+                            <div class="item-detail">
+                                <strong>Collected Date:</strong> {{ item.collected_date[:10] }}
+                            </div>
+                            {% endif %}
+                            {% if item.storage_location %}
+                            <div class="item-detail">
+                                <strong>Storage:</strong> {{ item.storage_location }}
+                            </div>
+                            {% endif %}
+                            {% if item.file_path %}
+                            <div class="item-detail">
+                                <strong>File:</strong> Available
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-items">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No evidence collected for this crime</p>
+                    <a href="{{ url_for('criminal.evidence_form', crime_id=crime_data.id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i>
+                        Add First Evidence
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{{ url_for('criminal.crime_form', crime_id=crime_data.id) }}" class="btn btn-secondary">
+            <i class="fas fa-edit"></i>
+            Edit Case
+        </a>
+        <a href="{{ url_for('criminal.view_criminal', criminal_id=crime_data.criminal_id) }}" class="btn btn-primary">
+            <i class="fas fa-user-secret"></i>
+            View Criminal Profile
+        </a>
+        <a href="{{ url_for('criminal.list_crimes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back to List
+        </a>
+        <button onclick="deleteCrime('{{ crime_data.id }}', '{{ crime_data.case_number }}')" class="btn btn-danger">
+            <i class="fas fa-trash-alt"></i>
+            Delete Case
+        </button>
+    </div>
+</div>
+
+<script>
+    // Delete Crime
+    async function deleteCrime(crimeId, caseNumber) {
+        if (!confirm(`Are you sure you want to delete case "${caseNumber}"? This action cannot be undone and will also affect all associated victims, punishments, and evidence.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/criminals/crimes/${crimeId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                if (window.toast) {
+                    window.toast.error('Error', data.message || 'Failed to delete crime case');
+                }
+            } else {
+                if (window.toast) {
+                    window.toast.success('Success', data.message || 'Crime case deleted successfully');
+                }
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("criminal.list_crimes") }}';
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            if (window.toast) {
+                window.toast.error('Error', 'Failed to delete crime case');
+            }
+        }
+    }
+</script>
+{% endblock %}
