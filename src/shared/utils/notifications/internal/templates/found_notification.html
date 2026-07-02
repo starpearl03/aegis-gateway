@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missing Person Update</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .letterhead {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .letterhead h2 {
+            margin: 0;
+            color: #1a3c6e;
+            font-weight: normal;
+            font-size: 22px;
+        }
+        .letterhead p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 30px;
+            font-style: italic;
+            color: #666;
+        }
+        .content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border: 1px solid #ddd;
+        }
+        .salutation {
+            margin-bottom: 20px;
+        }
+        .body-text {
+            margin-bottom: 30px;
+        }
+        .body-text p {
+            margin-bottom: 15px;
+        }
+        .signature {
+            margin-top: 40px;
+        }
+        .closing {
+            margin-bottom: 10px;
+        }
+        .signature-name {
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="letterhead">
+            <h2>Police Department</h2>
+            <p>Forensic Investigation Division</p>
+            <p>Morris Deport, Harare</p>
+        </div>
+
+        <div class="date">
+            {{ current_date }}
+        </div>
+
+        <div class="salutation">
+            Dear {{ recipient_name }},
+        </div>
+
+        <div class="body-text">
+            <p>This is to inform you that {{ missing_person_name }}, who was reported missing on {{ missing_date }}, has been located.</p>
+
+            <p>For further details and next steps, please contact the police department at (040) 2717860, Morris Deport, Harare. Please bring appropriate identification documents when you visit our office.</p>
+        </div>
+
+        <div class="signature">
+            <p class="closing">Yours sincerely,</p>
+            <p class="signature-name">The Forensic Department</p>
+        </div>
+
+        <div class="footer">
+            <p>This is an official communication from the Face X System. Please do not reply to this email.</p>
+            <p>&copy; {{ current_year }} Police Department. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
