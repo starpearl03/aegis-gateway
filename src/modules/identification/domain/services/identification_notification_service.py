@@ -1,14 +1,14 @@
+# ===== src/modules/identification/application/services/identification_notification_service.py =====
 import logging
-from datetime import datetime
 
-from src.modules.identification.domain.repositories.identification_search_repository import IdentificationSearchRepository
-from src.modules.identification.domain.repositories.identification_result_repository import IdentificationResultRepository
+from src.modules.identification.domain.repositories.dentification_search_repository import \
+    IdentificationSearchRepository
+from src.modules.identification.domain.repositories.identification_result_repository import \
+    IdentificationResultRepository
+from src.modules.identification.presentation.dtos.identification_dtos import SendMissingPersonNotificationRequest, \
+    SendMissingPersonNotificationResponse
 from src.modules.records.domain.repositories.missing_person_repository import MissingPersonRepository
 from src.modules.records.domain.repositories.reporter_repository import ReporterRepository
-from src.modules.identification.application.dtos.identification_dtos import (
-    SendMissingPersonNotificationRequest,
-    SendMissingPersonNotificationResponse
-)
 from src.shared.configs.exceptions.exceptions import NotFoundException, ValidationException
 from src.shared.utils.notifications.notification_service import (
     NotificationService,
@@ -30,8 +30,8 @@ class IdentificationNotificationService:
         self.notification_service = NotificationService()
 
     def send_missing_person_found_notification(
-        self,
-        request: SendMissingPersonNotificationRequest
+            self,
+            request: SendMissingPersonNotificationRequest
     ) -> SendMissingPersonNotificationResponse:
         """
         Send notification to reporters when a missing person is identified.

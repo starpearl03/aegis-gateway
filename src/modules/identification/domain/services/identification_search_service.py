@@ -2,30 +2,22 @@
 import os
 import logging
 from typing import List, Dict, Any
-from datetime import datetime
 
-from src.modules.identification.domain.models.identification_search import IdentificationSearch
-from src.modules.identification.domain.models.identification_result import IdentificationResult
-from src.modules.identification.domain.models.enums import SearchType, FileType, SearchStatus, PersonType
-from src.modules.identification.domain.repositories.identification_search_repository import \
+from src.modules.identification.domain.models import SearchType, FileType, IdentificationSearch, SearchStatus, \
+    PersonType, IdentificationResult
+from src.modules.identification.domain.repositories.dentification_search_repository import \
     IdentificationSearchRepository
 from src.modules.identification.domain.repositories.identification_result_repository import \
     IdentificationResultRepository
-from src.modules.identification.application.dtos.identification_dtos import (
-    CreateIdentificationSearchRequest,
-    IdentificationSearchResponse,
-    GetSearchResultsResponse
-)
-from src.modules.records.domain.repositories.person_repository import PersonRepository
-from src.modules.records.domain.repositories.person_image_repository import PersonImageRepository
+from src.modules.identification.presentation.dtos.identification_dtos import CreateIdentificationSearchRequest, \
+    IdentificationSearchResponse, GetSearchResultsResponse
 from src.modules.records.domain.repositories.criminal_repository import CriminalRepository
 from src.modules.records.domain.repositories.missing_person_repository import MissingPersonRepository
-from src.shared.configs.exceptions.exceptions import (
-    NotFoundException,
-    ValidationException,
-    InternalServerException
-)
-from src.shared.utils.facial_recognition.facial_recognition_service import FacialRecognitionService
+from src.modules.records.domain.repositories.person_image_repository import PersonImageRepository
+from src.modules.records.domain.repositories.person_repository import PersonRepository
+from src.modules.records.domain.repositories.reporter_repository import ReporterRepository
+from src.shared.configs.exceptions.exceptions import NotFoundException, InternalServerException, ValidationException
+from src.shared.utils.facial_recongition_service import FacialRecognitionService
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +35,7 @@ class IdentificationSearchService:
         self.image_repo = PersonImageRepository()
         self.criminal_repo = CriminalRepository()
         self.missing_person_repo = MissingPersonRepository()
+        self.reporter_repo = ReporterRepository()
         self.facial_service = FacialRecognitionService()
 
     def create_and_process_search(self, request: CreateIdentificationSearchRequest) -> IdentificationSearchResponse:
@@ -79,8 +72,11 @@ class IdentificationSearchService:
             saved_search = self.search_repo.create(search)
             logger.info(f"Created identification search: {saved_search.id}")
 
-            # Process the search asynchronously (or immediately for now)
+            # Process the search immediately
             self._process_search(saved_search.id)
+
+            # Reload search to get updated status
+            saved_search = self.search_repo.find_by_id(saved_search.id)
 
             # Return the search response
             return self._build_search_response(saved_search)
@@ -88,6 +84,93 @@ class IdentificationSearchService:
         except Exception as e:
             logger.error(f"Failed to create identification search: {str(e)}", exc_info=True)
             raise InternalServerException(f"Failed to create identification search: {str(e)}")
+
+    def get_search_by_id(self, search_id: str) -> IdentificationSearchResponse:
+        """
+        Get a specific search by ID.
+
+        Args:
+            search_id: ID of the search
+
+        Returns:
+            IdentificationSearchResponse DTO
+
+        Raises:
+            NotFoundException: If search not found
+        """
+        search = self.search_repo.find_by_id(search_id)
+        if not search:
+            raise NotFoundException(f"Search with ID {search_id} not found")
+
+        return self._build_search_response(search)
+
+    def get_search_results(self, search_id: str, matches_only: bool = True) -> GetSearchResultsResponse:
+        """
+        Get results for a specific search, grouped by person.
+
+        Args:
+            search_id: ID of the search
+            matches_only: If True, only return matches above threshold
+
+        Returns:
+            GetSearchResultsResponse DTO
+
+        Raises:
+            NotFoundException: If search not found
+        """
+        search = self.search_repo.find_by_id(search_id)
+        if not search:
+            raise NotFoundException(f"Search with ID {search_id} not found")
+
+        # Get best match per person
+        if matches_only:
+            results = self.result_repo.get_best_match_per_person(search_id)
+        else:
+            results = self.result_repo.find_by_search(search_id)
+
+        # Group results by person and build response
+        grouped_results = []
+        for result in results:
+            person_details = self._get_person_details(result.person_id, result.person_type)
+            matched_image_path = None
+
+            if result.matched_image_id:
+                matched_image = self.image_repo.find_by_id(result.matched_image_id)
+                if matched_image:
+                    matched_image_path = matched_image.image_path
+
+            # Build result with enhanced person details
+            result_dict = {
+                'result_id': result.id,
+                'person_id': result.person_id,
+                'person_type': result.person_type.value if result.person_type else None,
+                'similarity_score': result.similarity_score,
+                'is_match': result.is_match,
+                'matched_image_id': result.matched_image_id,
+                'matched_image_path': matched_image_path,
+                'person_details': person_details,
+                # Add flag for missing person (controller will handle notification logic)
+                'is_missing_person': result.person_type == PersonType.MISSING_PERSON
+            }
+
+            grouped_results.append(result_dict)
+
+        # Sort by similarity score descending
+        grouped_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+
+        total_matches = len([r for r in results if r.is_match])
+
+        return GetSearchResultsResponse(
+            message=f"Found {total_matches} match(es)" if matches_only else f"Found {len(results)} result(s)",
+            search_id=search.id,
+            search_type=search.search_type.value,
+            file_path=search.file_path,
+            status=search.status.value,
+            total_matches=total_matches,
+            unique_persons=len(grouped_results),
+            grouped_results=grouped_results,
+            created_at=search.created_at.isoformat()
+        )
 
     def _process_search(self, search_id: str) -> None:
         """
@@ -186,7 +269,7 @@ class IdentificationSearchService:
 
         for person in target_persons:
             # Get all images for this person
-            person_images = self.image_repo.find_by_person(person.id)
+            person_images = self.image_repo.find_by_person_id(person.id)
 
             for person_image in person_images:
                 # Skip images without vectors
@@ -199,6 +282,9 @@ class IdentificationSearchService:
                         face_vector,
                         person_image.image_vector
                     )
+
+                    # Convert numpy float64 to Python float for PostgreSQL compatibility
+                    similarity_score = float(similarity_score)
 
                     # Create result for this comparison
                     is_match = similarity_score >= self.SIMILARITY_THRESHOLD
@@ -226,69 +312,6 @@ class IdentificationSearchService:
 
         return results
 
-    def get_search_results(self, search_id: str, matches_only: bool = True) -> GetSearchResultsResponse:
-        """
-        Get results for a specific search, grouped by person.
-
-        Args:
-            search_id: ID of the search
-            matches_only: If True, only return matches above threshold
-
-        Returns:
-            GetSearchResultsResponse DTO
-
-        Raises:
-            NotFoundException: If search not found
-        """
-        search = self.search_repo.find_by_id(search_id)
-        if not search:
-            raise NotFoundException(f"Search with ID {search_id} not found")
-
-        # Get best match per person
-        if matches_only:
-            results = self.result_repo.get_best_match_per_person(search_id)
-        else:
-            results = self.result_repo.find_by_search(search_id)
-
-        # Group results by person and build response
-        grouped_results = []
-        for result in results:
-            person_details = self._get_person_details(result.person_id, result.person_type)
-            matched_image_path = None
-
-            if result.matched_image_id:
-                matched_image = self.image_repo.find_by_id(result.matched_image_id)
-                if matched_image:
-                    matched_image_path = matched_image.image_path
-
-            grouped_results.append({
-                'result_id': result.id,
-                'person_id': result.person_id,
-                'person_type': result.person_type.value if result.person_type else None,
-                'similarity_score': result.similarity_score,
-                'is_match': result.is_match,
-                'matched_image_id': result.matched_image_id,
-                'matched_image_path': matched_image_path,
-                'person_details': person_details
-            })
-
-        # Sort by similarity score descending
-        grouped_results.sort(key=lambda x: x['similarity_score'], reverse=True)
-
-        total_matches = len([r for r in results if r.is_match])
-
-        return GetSearchResultsResponse(
-            message=f"Found {total_matches} match(es)" if matches_only else f"Found {len(results)} result(s)",
-            search_id=search.id,
-            search_type=search.search_type.value,
-            file_path=search.file_path,
-            status=search.status.value,
-            total_matches=total_matches,
-            unique_persons=len(grouped_results),
-            grouped_results=grouped_results,
-            created_at=search.created_at.isoformat()
-        )
-
     def _get_person_details(self, person_id: str, person_type: PersonType) -> Dict[str, Any]:
         """
         Get person details based on person type.
@@ -306,30 +329,62 @@ class IdentificationSearchService:
                 if not criminal:
                     return {}
 
+                # Get primary image
+                primary_image = None
+                primary_image_obj = criminal.images.filter_by(is_primary=True).first()
+                if primary_image_obj:
+                    primary_image = primary_image_obj.image_path
+
                 return {
                     'id': criminal.id,
                     'first_name': criminal.first_name,
                     'last_name': criminal.last_name,
+                    'full_name': f"{criminal.first_name} {criminal.last_name}",
                     'alias': criminal.alias,
                     'is_wanted': criminal.is_wanted,
                     'priority_level': criminal.priority_level,
                     'threat_level': criminal.threat_level.value if criminal.threat_level else None,
                     'national_id': criminal.national_id,
-                    'distinctive_features': criminal.distinctive_features
+                    'distinctive_features': criminal.distinctive_features,
+                    'primary_image': primary_image,
+                    'gender': criminal.gender.value if criminal.gender else None,
+                    'date_of_birth': criminal.date_of_birth.isoformat() if criminal.date_of_birth else None
                 }
             else:  # MISSING_PERSON
                 missing_person = self.missing_person_repo.find_by_id(person_id)
                 if not missing_person:
                     return {}
 
+                # Get primary image
+                primary_image = None
+                primary_image_obj = missing_person.images.filter_by(is_primary=True).first()
+                if primary_image_obj:
+                    primary_image = primary_image_obj.image_path
+
+                # Get reporter info
+                reporter = self.reporter_repo.find_by_missing_person(person_id)
+                reporter_info = None
+                if reporter:
+                    reporter_info = {
+                        'name': f"{reporter.first_name} {reporter.last_name}",
+                        'phone': reporter.phone_number,
+                        'email': reporter.email,
+                        'relationship': reporter.relationship.value if reporter.relationship else None
+                    }
+
                 return {
                     'id': missing_person.id,
                     'first_name': missing_person.first_name,
                     'last_name': missing_person.last_name,
+                    'full_name': f"{missing_person.first_name} {missing_person.last_name}",
                     'status': missing_person.status.value,
                     'last_seen_date': missing_person.last_seen_date.isoformat() if missing_person.last_seen_date else None,
                     'national_id': missing_person.national_id,
-                    'distinctive_features': missing_person.distinctive_features
+                    'distinctive_features': missing_person.distinctive_features,
+                    'primary_image': primary_image,
+                    'gender': missing_person.gender.value if missing_person.gender else None,
+                    'date_of_birth': missing_person.date_of_birth.isoformat() if missing_person.date_of_birth else None,
+                    'reporter': reporter_info
                 }
         except Exception as e:
             logger.error(f"Error getting person details: {str(e)}")
