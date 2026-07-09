@@ -1,0 +1,1270 @@
+{% extends 'base.jinja2' %}
+
+{% set search_data = search if search else {} %}
+{% set results_data = results if results else {} %}
+{% set search_results = results_data.results if results_data.results else {} %}
+{% set grouped_matches = search_results.matches if search_results.matches else [] %}
+{% set total_matches = search_results.total_matches if search_results.total_matches else 0 %}
+{% set unique_persons = search_results.unique_persons if search_results.unique_persons else 0 %}
+
+{% block title %}Search Results | Sentinel{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   SEARCH SUMMARY HEADER
+   =========================== */
+.search-summary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.search-summary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.summary-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.summary-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(184, 134, 11, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border-gold);
+}
+
+.summary-icon i {
+    font-size: 32px;
+    color: var(--primary-gold);
+}
+
+.summary-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.summary-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.5px;
+}
+
+.summary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.summary-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.summary-meta-item i {
+    color: var(--primary-gold);
+    font-size: 12px;
+}
+
+.summary-stats {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-card {
+    padding: 16px 20px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    text-align: center;
+    min-width: 120px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary-gold);
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ===========================
+   SEARCH IMAGE PREVIEW
+   =========================== */
+.search-image-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.section-title i {
+    color: var(--primary-gold);
+    font-size: 20px;
+}
+
+.section-body {
+    padding: 24px;
+}
+
+.search-image-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.search-image-preview img,
+.search-image-preview video {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ===========================
+   RESULTS SECTION
+   =========================== */
+.results-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.results-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.results-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 6px 12px;
+    background: rgba(10, 14, 39, 0.4);
+    border-radius: var(--radius-md);
+}
+
+.results-body {
+    padding: 24px;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+/* ===========================
+   RESULT CARD
+   =========================== */
+.result-card {
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.result-card:hover {
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--primary-gold);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.result-card-body {
+    padding: 24px;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.result-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(184, 134, 11, 0.15));
+    border: 2px solid var(--border-gold);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--primary-gold);
+    font-weight: 700;
+}
+
+.result-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.result-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.3px;
+}
+
+.result-type-badge {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+
+.result-type-badge.criminal {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.result-type-badge.missing_person {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.result-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.result-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.result-meta-item i {
+    color: var(--primary-gold);
+    font-size: 12px;
+}
+
+/* ===========================
+   CONFIDENCE SCORE
+   =========================== */
+.confidence-section {
+    margin-bottom: 20px;
+}
+
+.confidence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.confidence-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.confidence-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.confidence-value.high {
+    color: var(--success);
+}
+
+.confidence-value.medium {
+    color: var(--warning);
+}
+
+.confidence-value.low {
+    color: var(--error);
+}
+
+.confidence-bar {
+    height: 8px;
+    background: rgba(10, 14, 39, 0.6);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.confidence-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.confidence-fill.high {
+    background: linear-gradient(90deg, var(--success), #34d399);
+}
+
+.confidence-fill.medium {
+    background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
+.confidence-fill.low {
+    background: linear-gradient(90deg, var(--error), #f87171);
+}
+
+.confidence-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+/* ===========================
+   PERSON DETAILS
+   =========================== */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* ===========================
+   MATCHED IMAGES
+   =========================== */
+.matched-images-section {
+    margin-bottom: 20px;
+}
+
+.matched-images-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.matched-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.matched-image-item {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: rgba(10, 14, 39, 0.4);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.matched-image-item:hover {
+    border-color: var(--primary-gold);
+    transform: scale(1.05);
+}
+
+.matched-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===========================
+   ACTION BUTTONS
+   =========================== */
+.result-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-dark));
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-gold-subtle);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--primary-gold);
+}
+
+.btn-notify {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.btn-notify:hover {
+    background: var(--info);
+    color: white;
+    border-color: var(--info);
+}
+
+/* ===========================
+   NO RESULTS STATE
+   =========================== */
+.no-results {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+}
+
+.no-results i {
+    font-size: 72px;
+    margin-bottom: 24px;
+    opacity: 0.5;
+    color: var(--primary-gold);
+}
+
+.no-results h3 {
+    font-size: 22px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.no-results p {
+    font-size: 15px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+}
+
+.no-results .btn {
+    display: inline-flex;
+}
+
+/* ===========================
+   BACK TO SEARCH
+   =========================== */
+.back-to-search {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 968px) {
+    .summary-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .summary-stats {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .result-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .result-meta {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-summary {
+        padding: 20px;
+    }
+
+    .summary-title {
+        font-size: 20px;
+    }
+
+    .stat-card {
+        min-width: 100px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .result-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 28px;
+    }
+
+    .result-name {
+        font-size: 18px;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .back-to-search {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('identification.search_page') }}" class="breadcrumb-item">
+            <span>Face Recognition</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>Search Results</span>
+        </span>
+    </div>
+
+    <!-- Search Summary Header -->
+    <div class="search-summary">
+        <div class="summary-content">
+            <div class="summary-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="summary-info">
+                <h1 class="summary-title">Face Recognition Search Results</h1>
+                <div class="summary-meta">
+                    <div class="summary-meta-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>{{ search_data.created_at[:10] if search_data.created_at else 'N/A' }}</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-clock"></i>
+                        <span>{{ search_data.created_at[11:19] if search_data.created_at else 'N/A' }}</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-tag"></i>
+                        <span>{{ search_data.search_type|replace('_', ' ')|title if search_data.search_type else 'N/A' }}</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-{{ 'image' if search_data.file_type == 'image' else 'video' }}"></i>
+                        <span>{{ search_data.file_type|title if search_data.file_type else 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ total_matches }}</div>
+                    <div class="stat-label">Total Matches</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ unique_persons }}</div>
+                    <div class="stat-label">Unique Persons</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Image Preview -->
+    {% if search_data.file_path %}
+    <div class="search-image-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-image"></i>
+                Uploaded {{ search_data.file_type|title if search_data.file_type else 'File' }}
+            </h2>
+        </div>
+        <div class="section-body">
+            <div class="search-image-preview">
+                {% if search_data.file_type == 'image' %}
+                    <img src="{{ url_for('uploads', filename=search_data.file_path|image_url) }}" alt="Search Image">
+                {% elif search_data.file_type == 'video' %}
+                    <video src="{{ url_for('uploads', filename=search_data.file_path|image_url) }}" controls></video>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results Section -->
+    <div class="results-section">
+        <div class="results-header">
+            <h2 class="section-title">
+                <i class="fas fa-users"></i>
+                Matched Persons
+            </h2>
+            <span class="results-count">{{ total_matches }} match{{ 'es' if total_matches != 1 else '' }} found</span>
+        </div>
+        <div class="results-body">
+            {% if grouped_matches and grouped_matches|length > 0 %}
+                <div class="results-grid">
+                    {% for match in grouped_matches %}
+                        {% set person_details = match.person_details if match.person_details else {} %}
+                        {% set person_id = match.person_id %}
+                        {% set person_type = match.person_type %}
+                        {% set similarity_score = match.similarity_score %}
+                        {% set confidence_level = 'high' if similarity_score >= 0.8 else ('medium' if similarity_score >= 0.6 else 'low') %}
+                        {% set confidence_percent = (similarity_score * 100)|round(1) %}
+
+                        {% set first_name = person_details.first_name if person_details.first_name else '' %}
+                        {% set last_name = person_details.last_name if person_details.last_name else '' %}
+                        {% set full_name = (first_name + ' ' + last_name)|trim %}
+                        {% set initials = (first_name[0] if first_name else '') + (last_name[0] if last_name else '') %}
+
+                        {% set view_url = match.view_url if match.view_url else '#' %}
+
+                        <div class="result-card">
+                            <div class="result-card-body">
+                                <!-- Result Header -->
+                                <div class="result-header">
+                                    <div class="result-avatar">
+                                        {% if match.matched_image_path %}
+                                            <img src="{{ url_for('uploads', filename=match.matched_image_path|image_url) }}" alt="{{ full_name }}">
+                                        {% else %}
+                                            {{ initials }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="result-info">
+                                        <h3 class="result-name">{{ full_name if full_name else 'Unknown Person' }}</h3>
+                                        <span class="result-type-badge {{ person_type }}">
+                                            {{ person_type|replace('_', ' ')|title }}
+                                        </span>
+                                        <div class="result-meta">
+                                            {% if person_details.national_id %}
+                                            <div class="result-meta-item">
+                                                <i class="fas fa-id-card"></i>
+                                                <span>{{ person_details.national_id }}</span>
+                                            </div>
+                                            {% endif %}
+                                            {% if person_details.gender %}
+                                            <div class="result-meta-item">
+                                                <i class="fas fa-venus-mars"></i>
+                                                <span>{{ person_details.gender|title }}</span>
+                                            </div>
+                                            {% endif %}
+                                            {% if person_details.date_of_birth %}
+                                            <div class="result-meta-item">
+                                                <i class="fas fa-calendar"></i>
+                                                <span>{{ person_details.date_of_birth }}</span>
+                                            </div>
+                                            {% endif %}
+                                            {% if person_details.phone_number %}
+                                            <div class="result-meta-item">
+                                                <i class="fas fa-phone"></i>
+                                                <span>{{ person_details.phone_number }}</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Confidence Score -->
+                                <div class="confidence-section">
+                                    <div class="confidence-header">
+                                        <span class="confidence-title">Match Confidence</span>
+                                        <span class="confidence-value {{ confidence_level }}">{{ confidence_percent }}%</span>
+                                    </div>
+                                    <div class="confidence-bar">
+                                        <div class="confidence-fill {{ confidence_level }}" style="width: {{ confidence_percent }}%"></div>
+                                    </div>
+                                    <div class="confidence-label">
+                                        {% if confidence_level == 'high' %}
+                                            High confidence match - Strong facial feature correlation
+                                        {% elif confidence_level == 'medium' %}
+                                            Medium confidence match - Moderate facial feature correlation
+                                        {% else %}
+                                            Low confidence match - Weak facial feature correlation
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Person Details -->
+                                {% if person_details %}
+                                <div class="details-grid">
+                                    {% if person_details.height %}
+                                    <div class="detail-item">
+                                        <div class="detail-label">Height</div>
+                                        <div class="detail-value">{{ person_details.height }} cm</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if person_details.weight %}
+                                    <div class="detail-item">
+                                        <div class="detail-label">Weight</div>
+                                        <div class="detail-value">{{ person_details.weight }} kg</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if person_details.hair_color %}
+                                    <div class="detail-item">
+                                        <div class="detail-label">Hair Color</div>
+                                        <div class="detail-value">{{ person_details.hair_color }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if person_details.eye_color %}
+                                    <div class="detail-item">
+                                        <div class="detail-label">Eye Color</div>
+                                        <div class="detail-value">{{ person_details.eye_color }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if person_details.skin_tone %}
+                                    <div class="detail-item">
+                                        <div class="detail-label">Skin Tone</div>
+                                        <div class="detail-value">{{ person_details.skin_tone }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Matched Images -->
+                                {% if match.matched_images and match.matched_images|length > 1 %}
+                                <div class="matched-images-section">
+                                    <div class="matched-images-title">All Matched Images ({{ match.matched_images|length }})</div>
+                                    <div class="matched-images-grid">
+                                        {% for img in match.matched_images %}
+                                        <div class="matched-image-item" onclick="viewImage('{{ url_for('uploads', filename=img.image_path|image_url) }}')">
+                                            <img src="{{ url_for('uploads', filename=img.image_path|image_url) }}" alt="Match {{ loop.index }}">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Action Buttons -->
+                                <div class="result-actions">
+                                    <a href="{{ view_url }}" class="btn btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                        View Full Profile
+                                    </a>
+                                    {% if person_type == 'missing_person' %}
+                                    <button type="button" class="btn btn-notify" onclick="sendNotification('{{ search_data.id }}', '{{ person_id }}', '{{ full_name }}')">
+                                        <i class="fas fa-bell"></i>
+                                        Notify Reporter
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-results">
+                    <i class="fas fa-user-slash"></i>
+                    <h3>No Matches Found</h3>
+                    <p>No matching persons were found in the {{ search_data.search_type|replace('_', ' ') }} database.<br>The uploaded {{ search_data.file_type }} did not match any existing records.</p>
+                    <a href="{{ url_for('identification.search_page') }}" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                        New Search
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Back to Search -->
+    <div class="back-to-search">
+        <a href="{{ url_for('identification.search_page') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back to Search
+        </a>
+        <a href="{{ url_for('identification.list_search_history') }}" class="btn btn-secondary">
+            <i class="fas fa-history"></i>
+            View All History
+        </a>
+    </div>
+</div>
+
+<script>
+// View image in lightbox
+function viewImage(imageSrc) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        cursor: pointer;
+        animation: fadeIn 0.3s ease;
+    `;
+
+    const imgClone = document.createElement('img');
+    imgClone.src = imageSrc;
+    imgClone.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        animation: scaleIn 0.3s ease;
+    `;
+
+    overlay.appendChild(imgClone);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', function() {
+        overlay.style.animation = 'fadeOut 0.2s ease';
+        setTimeout(() => {
+            if (document.body.contains(overlay)) {
+                document.body.removeChild(overlay);
+            }
+        }, 200);
+    });
+
+    // Add animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Send notification to missing person reporter
+async function sendNotification(searchId, personId, personName) {
+    if (!confirm(`Send notification to the reporter of ${personName}?\n\nThis will notify the reporter that their missing person has been potentially identified.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('{{ url_for("identification.send_notification") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                search_id: searchId,
+                person_id: personId
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               'Failed to send notification';
+            throw new Error(errorMessage);
+        }
+
+        // Success
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Notification sent successfully to reporter');
+        } else {
+            alert('Success: Notification sent successfully to reporter');
+        }
+
+    } catch (error) {
+        console.error('Notification error:', error);
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to send notification');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to send notification'));
+        }
+    }
+}
+
+// Animate confidence bars on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const confidenceFills = document.querySelectorAll('.confidence-fill');
+
+    // Reset widths to 0
+    confidenceFills.forEach(fill => {
+        const targetWidth = fill.style.width;
+        fill.style.width = '0%';
+
+        // Animate after short delay
+        setTimeout(() => {
+            fill.style.width = targetWidth;
+        }, 100);
+    });
+
+    // Animate result cards entrance
+    const resultCards = document.querySelectorAll('.result-card');
+    resultCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+});
+
+// Print results functionality
+function printResults() {
+    window.print();
+}
+
+// Export results as PDF (if needed in future)
+function exportResults() {
+    if (window.toast) {
+        window.toast.info('Coming Soon', 'PDF export functionality will be available soon');
+    } else {
+        alert('PDF export functionality will be available soon');
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // ESC to go back to search
+    if (e.key === 'Escape') {
+        window.location.href = '{{ url_for("identification.search_page") }}';
+    }
+});
+
+// Add hover effect to result cards for better UX
+document.querySelectorAll('.result-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transition = 'all 0.3s ease';
+    });
+});
+
+// Copy person ID to clipboard (if needed)
+function copyPersonId(personId) {
+    navigator.clipboard.writeText(personId).then(() => {
+        if (window.toast) {
+            window.toast.success('Copied', 'Person ID copied to clipboard');
+        } else {
+            alert('Person ID copied to clipboard');
+        }
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+
+// Add smooth scroll to top button (optional)
+window.addEventListener('scroll', function() {
+    const scrollBtn = document.getElementById('scrollToTop');
+    if (scrollBtn) {
+        if (window.pageYOffset > 300) {
+            scrollBtn.style.display = 'flex';
+        } else {
+            scrollBtn.style.display = 'none';
+        }
+    }
+});
+
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Initialize tooltips if needed
+document.querySelectorAll('[data-tooltip]').forEach(element => {
+    element.addEventListener('mouseenter', function() {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'custom-tooltip';
+        tooltip.textContent = this.getAttribute('data-tooltip');
+        tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(10, 14, 39, 0.95);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            white-space: nowrap;
+            border: 1px solid var(--border);
+        `;
+
+        document.body.appendChild(tooltip);
+
+        const rect = this.getBoundingClientRect();
+        tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
+        tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + 'px';
+
+        this.addEventListener('mouseleave', function() {
+            if (document.body.contains(tooltip)) {
+                document.body.removeChild(tooltip);
+            }
+        }, { once: true });
+    });
+});
+
+// Log search view for analytics (optional)
+{% if search_data.id %}
+(function() {
+    const searchId = '{{ search_data.id }}';
+    console.log('Viewing search results for:', searchId);
+    // Could send analytics event here if needed
+})();
+{% endif %}
+
+// Add loading state for images
+document.querySelectorAll('.result-avatar img, .matched-image-item img, .search-image-preview img').forEach(img => {
+    img.addEventListener('load', function() {
+        this.style.opacity = '1';
+    });
+
+    img.addEventListener('error', function() {
+        this.style.opacity = '0.5';
+        console.error('Failed to load image:', this.src);
+    });
+
+    // Initial state
+    img.style.opacity = '0';
+    img.style.transition = 'opacity 0.3s ease';
+});
+
+// Auto-hide flash messages after delay (if not using toast)
+setTimeout(() => {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        alert.style.transition = 'opacity 0.3s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 300);
+    });
+}, 5000);
+</script>
+
+<!-- Optional: Scroll to Top Button -->
+<button id="scrollToTop" onclick="scrollToTop()" style="
+    display: none;
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 48px;
+    height: 48px;
+    background: var(--primary-gold);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    transition: var(--transition);
+    align-items: center;
+    justify-content: center;
+">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<style>
+#scrollToTop:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg), var(--shadow-gold-subtle);
+}
+
+/* Print styles */
+@media print {
+    .page-breadcrumb,
+    .back-to-search,
+    .btn,
+    #scrollToTop {
+        display: none !important;
+    }
+
+    .result-card {
+        page-break-inside: avoid;
+        border: 1px solid #ccc !important;
+        background: white !important;
+    }
+
+    .search-summary,
+    .results-section {
+        border: 1px solid #ccc !important;
+        background: white !important;
+    }
+}
+</style>
+{% endblock %}
