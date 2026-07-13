@@ -5,7 +5,7 @@
     'records': {'enabled': true, 'endpoint': 'dashboard.dashboard_home'},
     'criminals': {'enabled': true, 'endpoint': 'criminal.list_criminals'},
     'missing': {'enabled': true, 'endpoint': 'missing_person.list_missing_persons'},
-    'identification': {'enabled': false, 'endpoint': 'identification.identify_form'},
+    'identification': {'enabled': true, 'endpoint': 'identification.search_page'},
     'users': {'enabled': true, 'endpoint': 'user_management.list_users'},
     'logout': {'enabled': true, 'endpoint': 'auth.logout'}
 } %}
@@ -552,7 +552,7 @@
             </li>
 
             <li class="nav-item">
-                <a href="{{ get_url('identification') }}" class="nav-link {% if request.endpoint == 'identification.identify_form' %}active{% endif %}">
+                <a href="{{ get_url('identification') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('identification.') %}active{% endif %}">
                     <div class="icon-container">
                         <i class="fas fa-camera"></i>
                     </div>
