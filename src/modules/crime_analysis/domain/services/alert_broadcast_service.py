@@ -49,8 +49,7 @@ class AlertBroadcastService:
             Dictionary mapping location IDs to lists of phone numbers
         """
         try:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            data_file = os.path.join(current_dir, "internal", "data", "location_contacts.json")
+            data_file = "broadcast_contacts.json"
 
             if not os.path.exists(data_file):
                 logger.warning(f"Location contacts file not found: {data_file}")
