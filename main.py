@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from src.config.factory import create_app
 from src.modules.authentication.presentation.controller.auth_controller import auth_bp
 from src.modules.authentication.presentation.controller.user_management_controller import user_management_bp
+from src.modules.crime_analysis.presentation.controller.analytics_controller import analysis_bp
 from src.modules.identification.presentation.controllers.identification_controller import identification_bp
 from src.modules.records.presentation.controllers.criminal_controller import criminal_bp
 from src.modules.records.presentation.controllers.dashboard_controller import dashboard_bp
@@ -92,7 +93,7 @@ def create_application():
     # Blueprints
     blueprints = [user_management_bp, auth_bp,
                   dashboard_bp, criminal_bp,
-                  missing_person_bp, identification_bp]
+                  missing_person_bp, identification_bp, analysis_bp]
 
 
     try:

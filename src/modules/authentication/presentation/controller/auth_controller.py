@@ -29,7 +29,7 @@ session_manager = SessionManager[User](user_repository)
 auth = SessionAuthDecorators(
     session_manager=session_manager,
     unauthorized_url='/',
-    home_url='/dashboard'
+    home_url='/analysis'
 )
 
 
@@ -67,7 +67,7 @@ def login():
             session.permanent = True
 
         flash(f'Welcome back, {response.first_name}!', 'success')
-        return redirect(url_for('user_management.list_users'))  # FIX THIS LINE
+        return redirect(url_for('analysis.list_analyses'))
 
     except AppException as e:
         return render_template('auth/login.jinja2'), e.status_code

@@ -1,10 +1,7 @@
 {# URL Configuration #}
 {% set nav_urls = {
-    'dashboard': {'enabled': true, 'endpoint': 'dashboard.dashboard_home'},
-    'reports': {'enabled': false, 'endpoint': 'identification.list_reports'},
+    'analysis': {'enabled': true, 'endpoint': 'analysis.list_analyses'},
     'records': {'enabled': true, 'endpoint': 'dashboard.dashboard_home'},
-    'criminals': {'enabled': true, 'endpoint': 'criminal.list_criminals'},
-    'missing': {'enabled': true, 'endpoint': 'missing_person.list_missing_persons'},
     'identification': {'enabled': true, 'endpoint': 'identification.search_page'},
     'users': {'enabled': true, 'endpoint': 'user_management.list_users'},
     'logout': {'enabled': true, 'endpoint': 'auth.logout'}
@@ -520,20 +517,11 @@
             </li>
 
             <li class="nav-item">
-                <a href="{{ get_url('dashboard') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('dashboard.') %}active{% endif %}">
+                <a href="{{ get_url('analysis') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('analysis.') %}active{% endif %}">
                     <div class="icon-container">
-                        <i class="fas fa-home"></i>
+                        <i class="fas fa-chart-line"></i>
                     </div>
-                    <span class="nav-text">Dashboard</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ get_url('reports') }}" class="nav-link {% if request.endpoint == 'identification.list_reports' %}active{% endif %}">
-                    <div class="icon-container">
-                        <i class="fas fa-file-alt"></i>
-                    </div>
-                    <span class="nav-text">Reports</span>
+                    <span class="nav-text">Crime Analysis</span>
                 </a>
             </li>
 
@@ -556,7 +544,7 @@
                     <div class="icon-container">
                         <i class="fas fa-camera"></i>
                     </div>
-                    <span class="nav-text">Face Recognition</span>
+                    <span class="nav-text">Smart Search</span>
                 </a>
             </li>
 
@@ -570,7 +558,7 @@
                     <div class="icon-container">
                         <i class="fas fa-user-shield"></i>
                     </div>
-                    <span class="nav-text">User Management</span>
+                    <span class="nav-text">Users</span>
                 </a>
             </li>
         </ul>
