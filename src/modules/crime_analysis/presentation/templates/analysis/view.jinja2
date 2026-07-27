@@ -1,0 +1,1550 @@
+{% extends 'base.jinja2' %}
+
+{% set analysis_data = analysis if analysis else {} %}
+{% set hotspots_list = hotspots if hotspots else [] %}
+{% set trends_list = trends if trends else [] %}
+{% set recommendations_list = recommendations if recommendations else [] %}
+{% set alerts_list = alerts if alerts else [] %}
+{% set crimes_list = individual_crimes if individual_crimes else [] %}
+
+{% set analysis_id = analysis_data.id if analysis_data.id else '' %}
+{% set period_start = analysis_data.analysis_period_start if analysis_data.analysis_period_start else '' %}
+{% set period_end = analysis_data.analysis_period_end if analysis_data.analysis_period_end else '' %}
+{% set total_crimes = analysis_data.total_crimes if analysis_data.total_crimes is defined else 0 %}
+{% set total_missing = analysis_data.total_missing_persons if analysis_data.total_missing_persons is defined else 0 %}
+{% set summary_text = analysis_data.summary if analysis_data.summary else 'No summary available' %}
+{% set generated_by = analysis_data.generated_by if analysis_data.generated_by else 'Unknown' %}
+{% set created_at = analysis_data.created_at if analysis_data.created_at else '' %}
+
+{% block title %}Analysis Report | Sentinel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ===========================
+   PAGE LAYOUT
+   =========================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ===========================
+   BREADCRUMB
+   =========================== */
+.page-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-gold);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ===========================
+   ANALYSIS SUMMARY HEADER
+   =========================== */
+.analysis-summary {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.analysis-summary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.summary-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 24px;
+}
+
+.summary-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(184, 134, 11, 0.15));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.summary-icon i {
+    font-size: 32px;
+    color: var(--primary-gold);
+}
+
+.summary-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.summary-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.5px;
+}
+
+.summary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.summary-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.summary-meta-item i {
+    color: var(--primary-gold);
+    font-size: 12px;
+}
+
+.summary-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card {
+    padding: 24px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-gold);
+    margin-bottom: 6px;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ===========================
+   ANALYSIS TEXT SECTION
+   =========================== */
+.analysis-text-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.section-title i {
+    color: var(--primary-gold);
+    font-size: 20px;
+}
+
+.section-body {
+    padding: 24px;
+}
+
+.analysis-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+/* ===========================
+   MAP VIEW TABS
+   =========================== */
+.map-tabs {
+    display: flex;
+    gap: 12px;
+}
+
+.map-tab {
+    padding: 10px 20px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-tab:hover {
+    background: rgba(10, 14, 39, 0.6);
+    border-color: var(--primary-gold);
+}
+
+.map-tab.active {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: var(--primary-gold);
+    color: var(--primary-gold);
+}
+
+.map-tab i {
+    font-size: 16px;
+}
+
+/* ===========================
+   MAP SECTION - CRITICAL: NO BACKDROP ON MAP ITSELF
+   =========================== */
+.map-section {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.map-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+/* MAP CONTAINER - ABSOLUTELY NO EFFECTS */
+#mapContainer {
+    width: 100%;
+    height: 500px;
+    background: #1a1d2e;
+    position: relative;
+}
+
+.leaflet-container {
+    background: #1a1d2e;
+    font-family: inherit;
+}
+
+/* ===========================
+   CONTENT GRID
+   =========================== */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+/* ===========================
+   CONTENT CARD
+   =========================== */
+.content-card {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.card-title i {
+    color: var(--primary-gold);
+    font-size: 18px;
+}
+
+.card-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    background: rgba(10, 14, 39, 0.4);
+    border-radius: var(--radius-md);
+}
+
+.card-body {
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.card-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+/* ===========================
+   LIST ITEMS
+   =========================== */
+.list-item {
+    padding: 14px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    transition: var(--transition);
+}
+
+.list-item:hover {
+    background: rgba(10, 14, 39, 0.5);
+    border-color: var(--primary-gold);
+}
+
+.list-item:last-child {
+    margin-bottom: 0;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.item-badge {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.item-badge.high {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.item-badge.medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.item-badge.low {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.item-badge.critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ff1744;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.item-badge.urgent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ff1744;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.item-description {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.item-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.item-meta i {
+    color: var(--primary-gold);
+    font-size: 11px;
+}
+
+/* ===========================
+   ALERT ITEM
+   =========================== */
+.alert-item {
+    padding: 16px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+}
+
+.alert-item:last-child {
+    margin-bottom: 0;
+}
+
+.alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.alert-location {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alert-location i {
+    color: var(--primary-gold);
+}
+
+.alert-status {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.alert-status.sent {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.alert-status.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.alert-status.failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.alert-message {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: rgba(10, 14, 39, 0.3);
+    border-radius: var(--radius-sm);
+}
+
+.alert-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.alert-recipients {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.alert-recipients i {
+    color: var(--primary-gold);
+}
+
+.alert-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.alert-btn {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alert-btn-send {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.alert-btn-send:hover {
+    background: var(--info);
+    color: white;
+    border-color: var(--info);
+}
+
+/* ===========================
+   EMPTY STATE
+   =========================== */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+    color: var(--primary-gold);
+}
+
+.empty-state h3 {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.empty-state p {
+    font-size: 13px;
+    margin: 0;
+}
+
+/* ===========================
+   ACTION BUTTONS
+   =========================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.btn i {
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-dark));
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-gold-subtle);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: rgba(10, 14, 39, 0.4);
+    border-color: var(--primary-gold);
+}
+
+.btn-danger {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: var(--error);
+    color: white;
+    border-color: var(--error);
+}
+
+.back-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 1200px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 968px) {
+    .summary-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .summary-actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .map-tabs {
+        flex-direction: column;
+    }
+
+    .map-tab {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .map-section .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .analysis-summary {
+        padding: 20px;
+    }
+
+    .summary-title {
+        font-size: 20px;
+    }
+
+    .summary-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 28px;
+    }
+
+    #mapContainer {
+        height: 400px;
+    }
+
+    .back-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Print styles */
+@media print {
+    .page-breadcrumb,
+    .summary-actions,
+    .back-actions,
+    .map-tabs,
+    .alert-actions,
+    #scrollToTop {
+        display: none !important;
+    }
+
+    .content-card,
+    .analysis-summary,
+    .analysis-text-section,
+    .map-section {
+        page-break-inside: avoid;
+        border: 1px solid #ccc !important;
+        background: white !important;
+    }
+
+    .list-item,
+    .alert-item {
+        border: 1px solid #ddd !important;
+        background: white !important;
+    }
+
+    .card-body {
+        max-height: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="page-breadcrumb">
+        <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <a href="{{ url_for('analysis.list_analyses') }}" class="breadcrumb-item">
+            <span>Analysis Reports</span>
+        </a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="breadcrumb-item active">
+            <span>Report Details</span>
+        </span>
+    </div>
+
+    <!-- Analysis Summary Header -->
+    <div class="analysis-summary">
+        <div class="summary-content">
+            <div class="summary-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="summary-info">
+                <h1 class="summary-title">Crime Analysis Report</h1>
+                <div class="summary-meta">
+                    <div class="summary-meta-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>{{ period_start[:10] if period_start else 'N/A' }} to {{ period_end[:10] if period_end else 'N/A' }}</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-user"></i>
+                        <span>Generated by: {{ generated_by[:30] }}...</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Created: {{ created_at[:10] if created_at else 'N/A' }}</span>
+                    </div>
+                    <div class="summary-meta-item">
+                        <i class="fas fa-fingerprint"></i>
+                        <span>ID: {{ analysis_id[:16] }}...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-actions">
+                {% if current_user and current_user.role == 'admin' %}
+                <button type="button" class="btn btn-danger" onclick="deleteAnalysis('{{ analysis_id }}')">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_crimes }}</div>
+                <div class="stat-label">Total Crimes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_missing }}</div>
+                <div class="stat-label">Missing Persons</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ hotspots_list|length }}</div>
+                <div class="stat-label">Hotspots</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ alerts_list|length }}</div>
+                <div class="stat-label">Alert Broadcasts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Summary Text -->
+    <div class="analysis-text-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-file-alt"></i>
+                Analysis Summary
+            </h2>
+        </div>
+        <div class="section-body">
+            <div class="analysis-text">{{ summary_text }}</div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="map-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-map-marked-alt"></i>
+                Map Visualization
+            </h2>
+            <div class="map-tabs">
+                <button type="button" class="map-tab active" onclick="switchMapView('hotspots')">
+                    <i class="fas fa-fire"></i>
+                    Hotspots
+                </button>
+                <button type="button" class="map-tab" onclick="switchMapView('crimes')">
+                    <i class="fas fa-map-pin"></i>
+                    Individual Crimes
+                </button>
+            </div>
+        </div>
+        <div id="mapContainer"></div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+        <!-- Hotspots Column -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-fire"></i>
+                    Crime Hotspots
+                </h3>
+                <span class="card-count">{{ hotspots_list|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if hotspots_list and hotspots_list|length > 0 %}
+                    {% for hotspot in hotspots_list %}
+                        {% set location = hotspot.location if hotspot.location else {} %}
+                        {% set area = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
+                        {% set risk_level = hotspot.risk_level if hotspot.risk_level else 'low' %}
+                        {% set incident_count = hotspot.incident_count if hotspot.incident_count is defined else 0 %}
+                        {% set crime_type = hotspot.crime_type if hotspot.crime_type else '' %}
+                        {% set is_missing = hotspot.is_missing_person_hotspot if hotspot.is_missing_person_hotspot is defined else false %}
+
+                        <div class="list-item">
+                            <div class="item-header">
+                                <span class="item-title">{{ area }}</span>
+                                <span class="item-badge {{ risk_level }}">{{ risk_level }}</span>
+                            </div>
+                            <div class="item-meta">
+                                <span>
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ incident_count }} incidents
+                                </span>
+                                {% if crime_type %}
+                                <span>
+                                    <i class="fas fa-tag"></i>
+                                    {{ crime_type }}
+                                </span>
+                                {% endif %}
+                                <span>
+                                    <i class="fas fa-{{ 'user-slash' if is_missing else 'user-secret' }}"></i>
+                                    {{ 'Missing Persons' if is_missing else 'Criminal Activity' }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-fire"></i>
+                        <h3>No Hotspots</h3>
+                        <p>No crime hotspots identified</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Trends Column -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Crime Trends
+                </h3>
+                <span class="card-count">{{ trends_list|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if trends_list and trends_list|length > 0 %}
+                    {% for trend in trends_list %}
+                        {% set crime_type = trend.crime_type if trend.crime_type else 'General Trend' %}
+                        {% set severity = trend.severity if trend.severity else 'low' %}
+                        {% set description = trend.description if trend.description else '' %}
+                        {% set trend_category = trend.trend_category if trend.trend_category else '' %}
+                        {% set affected_demo = trend.affected_demographic if trend.affected_demographic else '' %}
+                        {% set time_pattern = trend.time_pattern if trend.time_pattern else '' %}
+
+                        <div class="list-item">
+                            <div class="item-header">
+                                <span class="item-title">{{ crime_type }}</span>
+                                <span class="item-badge {{ severity }}">{{ severity }}</span>
+                            </div>
+                            <div class="item-description">{{ description }}</div>
+                            <div class="item-meta">
+                                {% if trend_category %}
+                                <span>
+                                    <i class="fas fa-layer-group"></i>
+                                    {{ trend_category.replace('_', ' ') }}
+                                </span>
+                                {% endif %}
+                                {% if affected_demo %}
+                                <span>
+                                    <i class="fas fa-users"></i>
+                                    {{ affected_demo }}
+                                </span>
+                                {% endif %}
+                                {% if time_pattern %}
+                                <span>
+                                    <i class="fas fa-clock"></i>
+                                    {{ time_pattern }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>No Trends</h3>
+                        <p>No crime trends identified</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recommendations Column -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-lightbulb"></i>
+                    Recommendations
+                </h3>
+                <span class="card-count">{{ recommendations_list|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if recommendations_list and recommendations_list|length > 0 %}
+                    {% for recommendation in recommendations_list %}
+                        {% set priority = recommendation.priority if recommendation.priority else 'low' %}
+                        {% set recommendation_text = recommendation.recommendation_text if recommendation.recommendation_text else '' %}
+
+                        <div class="list-item">
+                            <div class="item-header">
+                                <span class="item-badge {{ priority }}">{{ priority }}</span>
+                            </div>
+                            <div class="item-description">{{ recommendation_text }}</div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-lightbulb"></i>
+                        <h3>No Recommendations</h3>
+                        <p>No recommendations generated</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Alerts Column -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bell"></i>
+                    Alert Broadcasts
+                </h3>
+                <span class="card-count">{{ alerts_list|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if alerts_list and alerts_list|length > 0 %}
+                    {% for alert in alerts_list %}
+                        {% set alert_id = alert.id if alert.id else '' %}
+                        {% set message = alert.message if alert.message else '' %}
+                        {% set status = alert.status if alert.status else 'pending' %}
+                        {% set recipient_count = alert.recipient_count if alert.recipient_count is defined else 0 %}
+                        {% set sent_at = alert.sent_at if alert.sent_at else '' %}
+                        {% set hotspot_id = alert.hotspot_id if alert.hotspot_id else '' %}
+
+                        {# Find location from hotspots #}
+                        {% set location_name = 'Unknown Location' %}
+                        {% for hotspot in hotspots_list %}
+                            {% if hotspot.id == hotspot_id %}
+                                {% set location = hotspot.location if hotspot.location else {} %}
+                                {% set location_name = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="alert-item">
+                            <div class="alert-header">
+                                <div class="alert-location">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    {{ location_name }}
+                                </div>
+                                <span class="alert-status {{ status }}">{{ status }}</span>
+                            </div>
+                            <div class="alert-message">{{ message }}</div>
+                            <div class="alert-footer">
+                                <div class="alert-recipients">
+                                    <i class="fas fa-users"></i>
+                                    <span>{{ recipient_count }} recipient{{ 's' if recipient_count != 1 else '' }}</span>
+                                </div>
+                                {% if sent_at %}
+                                <div>
+                                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                                    <span>Sent: {{ sent_at[:10] }}</span>
+                                </div>
+                                {% endif %}
+                                {% if status == 'pending' and current_user and current_user.role == 'admin' %}
+                                <div class="alert-actions">
+                                    <button type="button" class="alert-btn alert-btn-send" onclick="sendAlert('{{ alert_id }}')">
+                                        <i class="fas fa-paper-plane"></i>
+                                        Send Now
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-bell"></i>
+                        <h3>No Alerts</h3>
+                        <p>No alert broadcasts created</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Actions -->
+    <div class="back-actions">
+        <a href="{{ url_for('analysis.list_analyses') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back to Reports
+        </a>
+        <a href="{{ url_for('analysis.preview_analysis') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Create New Analysis
+        </a>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map = null;
+let hotspotsLayer = null;
+let crimesLayer = null;
+let currentMapView = 'hotspots';
+
+// Store map data
+const mapData = {
+    hotspots: {{ hotspots_list|tojson }},
+    crimes: {{ crimes_list|tojson }}
+};
+
+// Initialize map on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    animateElements();
+    animateStatValues();
+});
+
+// Initialize Leaflet map
+function initMap() {
+    // Default center (Harare, Zimbabwe)
+    const defaultLat = -17.8292;
+    const defaultLng = 31.0522;
+
+    // Initialize map
+    map = L.map('mapContainer').setView([defaultLat, defaultLng], 12);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Create layer groups
+    hotspotsLayer = L.layerGroup().addTo(map);
+    crimesLayer = L.layerGroup();
+
+    // Load initial view
+    loadHotspots();
+
+    // Refresh map size after slight delay
+    setTimeout(() => map.invalidateSize(), 200);
+}
+
+// Load hotspots on map
+function loadHotspots() {
+    hotspotsLayer.clearLayers();
+    const bounds = [];
+
+    mapData.hotspots.forEach(hotspot => {
+        const loc = hotspot.location;
+        if (loc && loc.latitude && loc.longitude) {
+            const lat = parseFloat(loc.latitude);
+            const lng = parseFloat(loc.longitude);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                bounds.push([lat, lng]);
+
+                const color = getHotspotColor(hotspot.risk_level || 'low');
+                const radius = Math.max((hotspot.incident_count || 1) * 50, 100);
+
+                L.circle([lat, lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.4,
+                    radius: radius
+                }).addTo(hotspotsLayer).bindPopup(`
+                    <div style="font-family: inherit;">
+                        <strong style="color: var(--text-primary); font-size: 14px;">${loc.city || loc.address || 'Hotspot'}</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 12px;">
+                            Risk: <strong>${hotspot.risk_level || 'Unknown'}</strong><br>
+                            Incidents: <strong>${hotspot.incident_count || 0}</strong><br>
+                            ${hotspot.crime_type ? `Type: <strong>${hotspot.crime_type}</strong>` : ''}
+                        </span>
+                    </div>
+                `);
+            }
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+}
+
+// Load crimes on map
+function loadCrimes() {
+    crimesLayer.clearLayers();
+    const bounds = [];
+
+    mapData.crimes.forEach(crime => {
+        if (crime.latitude && crime.longitude) {
+            const lat = parseFloat(crime.latitude);
+            const lng = parseFloat(crime.longitude);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                bounds.push([lat, lng]);
+
+                const color = getCrimeColor(crime.crime_type);
+
+                L.circleMarker([lat, lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.8
+                }).addTo(crimesLayer).bindPopup(`
+                    <div style="font-family: inherit;">
+                        <strong style="color: var(--text-primary); font-size: 14px;">${crime.crime_type || 'Crime'}</strong><br>
+                        <span style="color: var(--text-secondary); font-size: 12px;">
+                            Status: <strong>${crime.status || 'Unknown'}</strong><br>
+                            ${crime.date_committed ? `Date: <strong>${crime.date_committed.substring(0, 10)}</strong>` : ''}
+                        </span>
+                    </div>
+                `);
+            }
+        }
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+        // Reset to default view if no crimes
+        map.setView([-17.8292, 31.0522], 12);
+    }
+}
+
+// Switch map view
+function switchMapView(view) {
+    currentMapView = view;
+
+    // Update tab active states
+    document.querySelectorAll('.map-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+
+    // Switch layers
+    if (view === 'hotspots') {
+        map.removeLayer(crimesLayer);
+        map.addLayer(hotspotsLayer);
+        loadHotspots();
+    } else {
+        map.removeLayer(hotspotsLayer);
+        map.addLayer(crimesLayer);
+        loadCrimes();
+    }
+
+    // Refresh map
+    setTimeout(() => map.invalidateSize(), 100);
+}
+
+// Get hotspot color based on risk level
+function getHotspotColor(risk) {
+    const colors = {
+        low: '#4CAF50',
+        medium: '#FFC107',
+        high: '#FF5722',
+        critical: '#F44336'
+    };
+    return colors[risk.toLowerCase()] || '#9E9E9E';
+}
+
+// Get crime color based on type
+function getCrimeColor(type) {
+    const colors = {
+        murder: '#8B0000',
+        assault: '#DC143C',
+        robbery: '#FF4500',
+        burglary: '#FF8C00',
+        theft: '#FFD700',
+        vandalism: '#9370DB',
+        fraud: '#FF69B4',
+        kidnapping: '#8B0000'
+    };
+    return colors[type?.toLowerCase()] || '#808080';
+}
+
+// Send alert
+async function sendAlert(alertId) {
+    if (!confirm('Send this alert broadcast now?\n\nThis will send SMS notifications to all residents in the affected area.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/analysis/alerts/${alertId}/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               'Failed to send alert';
+            throw new Error(errorMessage);
+        }
+
+        // Success
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Alert sent successfully');
+        } else {
+            alert('Success: Alert sent successfully');
+        }
+
+        // Reload page after short delay
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error('Send alert error:', error);
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to send alert');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to send alert'));
+        }
+    }
+}
+
+// Delete analysis
+async function deleteAnalysis(analysisId) {
+    if (!confirm('Are you sure you want to delete this analysis report?\n\nThis action cannot be undone and will delete all associated hotspots, trends, recommendations, and alerts.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/analysis/${analysisId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               'Failed to delete analysis';
+            throw new Error(errorMessage);
+        }
+
+        // Success
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Analysis deleted successfully');
+        } else {
+            alert('Success: Analysis deleted successfully');
+        }
+
+        // Redirect to list after short delay
+        setTimeout(() => {
+            window.location.href = '{{ url_for("analysis.list_analyses") }}';
+        }, 1000);
+
+    } catch (error) {
+        console.error('Delete error:', error);
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to delete analysis');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to delete analysis'));
+        }
+    }
+}
+
+// Animate elements on page load
+function animateElements() {
+    // Animate cards
+    const cards = document.querySelectorAll('.content-card, .analysis-text-section, .map-section');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+
+    // Animate list items
+    const listItems = document.querySelectorAll('.list-item, .alert-item');
+    listItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-10px)';
+
+        setTimeout(() => {
+            item.style.transition = 'all 0.3s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateX(0)';
+        }, 50 * index);
+    });
+}
+
+// Animate stat values counting up
+function animateStatValues() {
+    const statValues = document.querySelectorAll('.stat-value');
+
+    statValues.forEach(stat => {
+        const target = parseInt(stat.textContent) || 0;
+        let current = 0;
+        const increment = target / 30;
+        const duration = 1000;
+        const stepTime = duration / 30;
+
+        stat.textContent = '0';
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                stat.textContent = target;
+                clearInterval(timer);
+            } else {
+                stat.textContent = Math.floor(current);
+            }
+        }, stepTime);
+    });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // ESC to go back
+    if (e.key === 'Escape') {
+        window.location.href = '{{ url_for("analysis.list_analyses") }}';
+    }
+
+    // P to print
+    if (e.key === 'p' || e.key === 'P') {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            window.print();
+        }
+    }
+});
+
+// Handle responsive map height
+function handleResize() {
+    const width = window.innerWidth;
+    const mapContainer = document.getElementById('mapContainer');
+
+    if (width < 768) {
+        mapContainer.style.height = '400px';
+    } else {
+        mapContainer.style.height = '500px';
+    }
+
+    if (map) {
+        map.invalidateSize();
+    }
+}
+
+window.addEventListener('resize', handleResize);
+handleResize();
+
+// Log analysis view
+console.log('Analysis Report View', {
+    analysis_id: '{{ analysis_id }}',
+    period: '{{ period_start[:10] }} to {{ period_end[:10] }}',
+    stats: {
+        crimes: {{ total_crimes }},
+        missing: {{ total_missing }},
+        hotspots: {{ hotspots_list|length }},
+        alerts: {{ alerts_list|length }}
+    }
+});
+</script>
+
+<!-- Scroll to Top Button -->
+<button id="scrollToTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="
+    display: none;
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 48px;
+    height: 48px;
+    background: var(--primary-gold);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    transition: var(--transition);
+    align-items: center;
+    justify-content: center;
+">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+// Show/hide scroll to top button
+window.addEventListener('scroll', function() {
+    const scrollBtn = document.getElementById('scrollToTop');
+    if (scrollBtn) {
+        if (window.pageYOffset > 300) {
+            scrollBtn.style.display = 'flex';
+        } else {
+            scrollBtn.style.display = 'none';
+        }
+    }
+});
+
+// Enhance scroll to top button
+const scrollBtn = document.getElementById('scrollToTop');
+if (scrollBtn) {
+    scrollBtn.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-4px) scale(1.05)';
+    });
+
+    scrollBtn.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+    });
+}
+</script>
+{% endblock %}
