@@ -42,7 +42,7 @@ class MailClient:
                 self.smtp_server = smtplib.SMTP_SSL(smtp_host, smtp_port)
 
             # Set a timeout for operations
-            self.smtp_server.timeout = 10
+            self.smtp_server.timeout = 60
 
             username = str(smtp_config.username)
             password = str(smtp_config.password)
@@ -51,8 +51,21 @@ class MailClient:
             self.smtp_server.login(username, password)
 
             logger.info("SMTP connection established successfully")
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP authentication failed for {smtp_config.username}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"SMTP Authentication Error: Check your email credentials in config.yaml - {str(e)}")
+        except smtplib.SMTPConnectError as e:
+            error_msg = f"Failed to connect to SMTP server {smtp_host}:{smtp_port}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"SMTP Connection Error: Cannot reach email server - {str(e)}")
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"SMTP Error: {str(e)}")
         except Exception as e:
-            logger.error(f"SMTP connection error: {e}")
+            error_msg = f"Unexpected SMTP connection error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
             raise
 
     def send_email(
@@ -92,12 +105,26 @@ class MailClient:
                 msg.as_string()
             )
 
-            logger.info(f"Email sent successfully to {recipient}")
+            logger.info(f"✅ Email sent successfully to {recipient}")
             return True
 
+        except smtplib.SMTPRecipientsRefused as e:
+            error_msg = f"Recipient {recipient} was refused by the server: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"Invalid recipient email address: {recipient} - {str(e)}")
+        except smtplib.SMTPSenderRefused as e:
+            error_msg = f"Sender {self.email_config.from_email} was refused: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"Invalid sender email address - {str(e)}")
+        except smtplib.SMTPDataError as e:
+            error_msg = f"SMTP data error: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise Exception(f"Email content rejected by server - {str(e)}")
         except Exception as e:
-            logger.error(f"Email sending failed: {e}")
-            return False
+            error_msg = f"Failed to send email to {recipient}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            # Re-raise the exception so it can be caught by NotificationService
+            raise
         finally:
             if self.smtp_server:
                 try:

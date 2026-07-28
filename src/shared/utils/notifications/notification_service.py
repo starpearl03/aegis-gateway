@@ -6,7 +6,12 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
 from jinja2.exceptions import TemplateNotFound
 
-from src.shared.configs.exceptions.exceptions import InternalServerException, ServiceUnavailableException
+from src.shared.configs.exceptions.exceptions import (
+    InternalServerException,
+    ServiceUnavailableException,
+    ValidationException,
+    BadRequestException
+)
 from src.shared.utils.notifications.internal.mail_client import MailClient
 from src.shared.utils.notifications.internal.sms_client import SMSClient
 
@@ -91,43 +96,111 @@ class NotificationService:
 
     def send_email_sms_notification(self, request: FoundNotificationRequest) -> NotificationResult:
         """
-        Send notifications about a found missing person via email and SMS
+        Send notifications about a found missing person via email and SMS.
+        Raises exceptions if notifications fail.
 
         Args:
             request: FoundNotificationRequest containing recipient and missing person details
 
         Returns:
             NotificationResult with success status and details of each notification
+
+        Raises:
+            ValidationException: If contact information is invalid or notifications fail
+            BadRequestException: If no contact information is provided
+            ServiceUnavailableException: If notification service is unavailable
         """
         email_sent = False
         sms_sent = False
-        error_message = None
+        email_error = None
+        sms_error = None
 
-        try:
-            # Send email notification
-            email_sent = self._send_email_found_notification(request.email_recipient)
+        # Validate that we have at least one contact method
+        has_email = bool(request.email_recipient.recipient_email and
+                         request.email_recipient.recipient_email.strip())
+        has_mobile = bool(request.mobile_number and request.mobile_number.strip())
 
-            # Send SMS notification if mobile number provided
-            if request.mobile_number:
-                sms_message = f"{request.email_recipient.missing_person_name} reported missing has been found. Contact (040)2717860, Morris Deport, for details."
-                sms_sent = self._send_sms_notification(request.mobile_number, sms_message)
-
-            success = email_sent or sms_sent
-
-            return NotificationResult(
-                success=success,
-                email_sent=email_sent,
-                sms_sent=sms_sent
+        if not has_email and not has_mobile:
+            raise BadRequestException(
+                "No contact information provided",
+                details=["At least one contact method (email or mobile number) is required"]
             )
 
-        except Exception as e:
-            logger.error(f"Error sending found notifications: {e}", exc_info=True)
-            return NotificationResult(
-                success=False,
-                email_sent=email_sent,
-                sms_sent=sms_sent,
-                error_message=str(e)
+        # Track which notifications we attempted and their results
+        attempted_methods = []
+        failed_methods = []
+
+        # Try to send email notification
+        if has_email:
+            attempted_methods.append(f"email to {request.email_recipient.recipient_email}")
+            try:
+                email_sent = self._send_email_found_notification(request.email_recipient)
+                logger.info(f"✅ Email notification sent to {request.email_recipient.recipient_email}")
+            except (InternalServerException, ServiceUnavailableException, ValidationException) as e:
+                # These are already formatted exceptions from the email method
+                email_error = f"{e.message}: {', '.join(e.details) if e.details else ''}"
+                failed_methods.append(f"Email to {request.email_recipient.recipient_email}: {email_error}")
+                logger.error(f"❌ Email notification failed: {email_error}")
+            except Exception as e:
+                email_error = str(e)
+                failed_methods.append(f"Email to {request.email_recipient.recipient_email}: {email_error}")
+                logger.error(f"❌ Email notification failed: {e}", exc_info=True)
+
+        # Try to send SMS notification if mobile number provided
+        if has_mobile:
+            attempted_methods.append(f"SMS to {request.mobile_number}")
+            try:
+                sms_message = (
+                    f"{request.email_recipient.missing_person_name} reported missing has been found. "
+                    f"Contact (040)2717860, Morris Deport, for details."
+                )
+                sms_sent, message_sid = self._send_sms_notification(
+                    request.mobile_number,
+                    sms_message
+                )
+                logger.info(f"✅ SMS notification sent to {request.mobile_number} (SID: {message_sid})")
+            except (ServiceUnavailableException, ValidationException) as e:
+                # These are already formatted exceptions from the SMS method
+                sms_error = f"{e.message}: {', '.join(e.details) if e.details else ''}"
+                failed_methods.append(f"SMS to {request.mobile_number}: {sms_error}")
+                logger.error(f"❌ SMS notification failed: {sms_error}")
+            except Exception as e:
+                sms_error = str(e)
+                failed_methods.append(f"SMS to {request.mobile_number}: {sms_error}")
+                logger.error(f"❌ SMS notification failed: {e}", exc_info=True)
+
+        # Determine overall success
+        at_least_one_succeeded = email_sent or sms_sent
+        all_failed = not at_least_one_succeeded
+
+        # If all notifications failed, raise exception with details
+        if all_failed:
+            error_details = [
+                                f"Attempted {len(attempted_methods)} notification(s), all failed:"
+                            ] + failed_methods
+
+            logger.error(f"❌ All notifications failed. Attempted: {', '.join(attempted_methods)}")
+
+            raise ValidationException(
+                "Failed to send any notifications",
+                details=error_details
             )
+
+        # If some failed but at least one succeeded, log warning but return success
+        if failed_methods:
+            logger.warning(
+                f"⚠️ Partial notification success: "
+                f"{sum([email_sent, sms_sent])}/{len(attempted_methods)} succeeded. "
+                f"Failed: {', '.join(failed_methods)}"
+            )
+
+        # Return result
+        return NotificationResult(
+            success=True,
+            email_sent=email_sent,
+            sms_sent=sms_sent,
+            error_message="; ".join(failed_methods) if failed_methods else None
+        )
 
     def broadcast_sms(self, request: BroadcastSMSRequest) -> BroadcastResult:
         """
@@ -139,6 +212,12 @@ class NotificationService:
         Returns:
             BroadcastResult with statistics of the broadcast operation
         """
+        if not request.mobile_numbers:
+            raise BadRequestException(
+                "No mobile numbers provided for broadcast",
+                details=["At least one mobile number is required"]
+            )
+
         total_recipients = len(request.mobile_numbers)
         successful_sends = 0
         failed_numbers = []
@@ -184,8 +263,20 @@ class NotificationService:
             email_recipient: EmailRecipient DTO containing recipient and missing person details
 
         Returns:
-            bool: True if email sent successfully, False otherwise
+            bool: True if email sent successfully
+
+        Raises:
+            InternalServerException: If template not found or rendering fails
+            ServiceUnavailableException: If email service is unavailable (captures actual SMTP error)
+            ValidationException: If email address is invalid
         """
+        # Validate email recipient
+        if not email_recipient.recipient_email or not email_recipient.recipient_email.strip():
+            raise ValidationException(
+                "Invalid email recipient",
+                details=["Email address is required and cannot be empty"]
+            )
+
         try:
             # Load template
             try:
@@ -193,37 +284,67 @@ class NotificationService:
             except TemplateNotFound:
                 raise InternalServerException(
                     "Found notification template not found",
-                    details=["Template file: found_notification.html is missing"]
+                    details=["Template file: found_notification.html is missing from internal/templates/"]
                 )
 
             # Render template
-            html_content = template.render(
-                recipient_name=email_recipient.recipient_name,
-                missing_person_name=email_recipient.missing_person_name,
-                missing_date=email_recipient.missing_date,
-                current_year=datetime.now().strftime("%B %d, %Y")
-            )
+            try:
+                html_content = template.render(
+                    recipient_name=email_recipient.recipient_name,
+                    missing_person_name=email_recipient.missing_person_name,
+                    missing_date=email_recipient.missing_date,
+                    current_year=datetime.now().strftime("%B %d, %Y")
+                )
+            except Exception as e:
+                raise InternalServerException(
+                    "Failed to render email template",
+                    details=[f"Template rendering error: {str(e)}"]
+                )
 
-            # Send email
-            success = self.mail_service.send_email(
-                subject="Update on Missing Person Case",
-                recipient=email_recipient.recipient_email,
-                body=html_content,
-                is_html=True
-            )
+            # Send email - this is where we capture the ACTUAL error from mail_client
+            try:
+                success = self.mail_service.send_email(
+                    subject="Update on Missing Person Case",
+                    recipient=email_recipient.recipient_email,
+                    body=html_content,
+                    is_html=True
+                )
 
-            if success:
+                if not success:
+                    # Mail service returned False - it should have logged the actual error
+                    # Check the logs from mail_client for the real reason
+                    raise ServiceUnavailableException(
+                        "Email service failed to send message",
+                        details=[
+                            f"Failed to send email to {email_recipient.recipient_email}",
+                            "Check application logs for SMTP connection errors"
+                        ]
+                    )
+
                 logger.info(f"Found notification email sent to {email_recipient.recipient_email}")
-            else:
-                logger.error(f"Failed to send found notification email to {email_recipient.recipient_email}")
+                return True
 
-            return success
+            except Exception as e:
+                # This catches actual SMTP errors from mail_client
+                error_message = str(e)
+                logger.error(f"SMTP Error: {error_message}", exc_info=True)
 
-        except (InternalServerException, ServiceUnavailableException):
+                raise ServiceUnavailableException(
+                    "Email service error",
+                    details=[
+                        f"SMTP Error: {error_message}",
+                        f"Recipient: {email_recipient.recipient_email}"
+                    ]
+                )
+
+        except (InternalServerException, ServiceUnavailableException, ValidationException):
             raise
         except Exception as e:
-            logger.error(f"Failed to send found notification: {e}", exc_info=True)
-            return False
+            logger.error(f"Unexpected error sending email: {e}", exc_info=True)
+            raise ServiceUnavailableException(
+                "Unexpected email error",
+                details=[f"Error: {str(e)}"]
+            )
 
     def _send_sms_notification(self, mobile_number: str, user_sms: str) -> tuple[bool, Optional[str]]:
         """
@@ -235,26 +356,62 @@ class NotificationService:
 
         Returns:
             tuple: (success: bool, message_sid: Optional[str])
-        """
-        try:
-            if not mobile_number:
-                logger.info("No mobile number provided. Skipping SMS notification.")
-                return False, None
 
+        Raises:
+            ValidationException: If mobile number is invalid
+            ServiceUnavailableException: If SMS service fails (captures actual Twilio error)
+        """
+        # Validate mobile number
+        if not mobile_number or not mobile_number.strip():
+            raise ValidationException(
+                "Invalid mobile number",
+                details=["Mobile number is required and cannot be empty"]
+            )
+
+        try:
             # Render SMS content from template
             template = Template(self.SMS_TEMPLATE)
             sms_content = template.render(user_sms=user_sms)
 
-            logger.info(f"Sending SMS notification to {mobile_number}")
-            success, message_sid = self.sms_service.send_sms(mobile_number, sms_content)
+            logger.info(f"Attempting to send SMS to {mobile_number}")
 
-            if success:
-                logger.info(f"SMS notification sent successfully (SID: {message_sid})")
-            else:
-                logger.error(f"Failed to send SMS notification to {mobile_number}")
+            # This is where we capture the ACTUAL error from sms_client
+            try:
+                success, message_sid = self.sms_service.send_sms(mobile_number, sms_content)
 
-            return success, message_sid
+                if not success:
+                    # SMS service returned False - it should have logged the actual Twilio error
+                    # Check the logs from sms_client for the real reason
+                    raise ServiceUnavailableException(
+                        "SMS service failed to send message",
+                        details=[
+                            f"Failed to send SMS to {mobile_number}",
+                            "Check application logs for Twilio error details",
+                            "Common causes: invalid number format, unverified number (trial account), invalid credentials"
+                        ]
+                    )
 
+                logger.info(f"SMS sent successfully (SID: {message_sid})")
+                return success, message_sid
+
+            except Exception as e:
+                # This catches actual Twilio errors from sms_client
+                error_message = str(e)
+                logger.error(f"Twilio Error: {error_message}", exc_info=True)
+
+                raise ServiceUnavailableException(
+                    "SMS service error",
+                    details=[
+                        f"Twilio Error: {error_message}",
+                        f"Recipient: {mobile_number}"
+                    ]
+                )
+
+        except (ValidationException, ServiceUnavailableException):
+            raise
         except Exception as e:
-            logger.error(f"Failed to send SMS notification: {e}", exc_info=True)
-            return False, None
+            logger.error(f"Unexpected error sending SMS: {e}", exc_info=True)
+            raise ServiceUnavailableException(
+                "Unexpected SMS error",
+                details=[f"Error: {str(e)}"]
+            )
