@@ -55,6 +55,7 @@ class IdentificationSearchResponse:
     file_path: str
     file_type: str
     status: str
+    notification_sent: bool
     created_at: str
     updated_at: str
 
@@ -66,6 +67,7 @@ class IdentificationSearchResponse:
             'file_path': self.file_path,
             'file_type': self.file_type,
             'status': self.status,
+            'notification_sent': self.notification_sent,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
@@ -194,6 +196,7 @@ class GetSearchResultsResponse:
     search_type: str
     file_path: str
     status: str
+    notification_sent: bool
     total_matches: int
     unique_persons: int
     grouped_results: List[Dict[str, Any]]  # Grouped by person
@@ -208,6 +211,7 @@ class GetSearchResultsResponse:
                 'type': self.search_type,
                 'file_path': self.file_path,
                 'status': self.status,
+                'notification_sent': self.notification_sent,
                 'created_at': self.created_at
             },
             'results': {

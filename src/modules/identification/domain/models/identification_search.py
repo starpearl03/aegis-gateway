@@ -12,6 +12,7 @@ class IdentificationSearch(BaseModel):
     file_type = db.Column(db.Enum(FileType), nullable=False)
     status = db.Column(db.Enum(SearchStatus), default=SearchStatus.PENDING,
                        nullable=False, index=True)
+    notification_sent = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
     # Relationships
     results = db.relationship('IdentificationResult', back_populates='search',

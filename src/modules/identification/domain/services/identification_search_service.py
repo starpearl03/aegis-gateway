@@ -166,6 +166,7 @@ class IdentificationSearchService:
             search_type=search.search_type.value,
             file_path=search.file_path,
             status=search.status.value,
+            notification_sent=search.notification_sent,
             total_matches=total_matches,
             unique_persons=len(grouped_results),
             grouped_results=grouped_results,
@@ -398,6 +399,7 @@ class IdentificationSearchService:
             file_path=search.file_path,
             file_type=search.file_type.value,
             status=search.status.value,
+            notification_sent=search.notification_sent,
             created_at=search.created_at.isoformat(),
             updated_at=search.updated_at.isoformat()
         )

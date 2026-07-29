@@ -198,6 +198,7 @@ class IdentificationHistoryService:
             file_path=search.file_path,
             file_type=search.file_type.value,
             status=search.status.value,
+            notification_sent=search.notification_sent,
             created_at=search.created_at.isoformat(),
             updated_at=search.updated_at.isoformat()
         )

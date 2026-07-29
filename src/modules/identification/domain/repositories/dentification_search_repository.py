@@ -48,3 +48,16 @@ class IdentificationSearchRepository(BaseRepository[IdentificationSearch]):
     def find_failed_searches(self) -> List[IdentificationSearch]:
         """Find all failed searches"""
         return self.find_by_status(SearchStatus.FAILED)
+
+    def mark_notification_sent(self, search: IdentificationSearch) -> IdentificationSearch:
+        """
+        Mark notification as sent for a search
+
+        Args:
+            search: The search to mark
+
+        Returns:
+            Updated search instance
+        """
+        search.notification_sent = True
+        return self.update(search)

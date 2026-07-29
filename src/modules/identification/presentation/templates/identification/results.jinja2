@@ -6,6 +6,7 @@
 {% set grouped_matches = search_results.matches if search_results.matches else [] %}
 {% set total_matches = search_results.total_matches if search_results.total_matches else 0 %}
 {% set unique_persons = search_results.unique_persons if search_results.unique_persons else 0 %}
+{% set notification_sent = search_data.notification_sent if search_data.notification_sent else false %}
 
 {% block title %}Search Results | Sentinel{% endblock %}
 
@@ -570,6 +571,35 @@
     border-color: var(--info);
 }
 
+.btn-notified {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    position: relative;
+}
+
+.btn-notified:hover {
+    background: rgba(34, 197, 94, 0.25);
+    border-color: var(--success);
+}
+
+.btn-notified .notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    background: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+    font-weight: 700;
+    border: 2px solid rgba(10, 14, 39, 0.8);
+}
+
 /* ===========================
    NO RESULTS STATE
    =========================== */
@@ -725,6 +755,12 @@
                         <i class="fas fa-{{ 'image' if search_data.file_type == 'image' else 'video' }}"></i>
                         <span>{{ search_data.file_type|title if search_data.file_type else 'N/A' }}</span>
                     </div>
+                    {% if notification_sent %}
+                    <div class="summary-meta-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span style="color: var(--success);">Notification Sent</span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <div class="summary-stats">
@@ -910,10 +946,20 @@
                                         View Full Profile
                                     </a>
                                     {% if person_type == 'missing_person' %}
-                                    <button type="button" class="btn btn-notify" onclick="sendNotification('{{ search_data.id }}', '{{ person_id }}', '{{ full_name }}')">
-                                        <i class="fas fa-bell"></i>
-                                        Notify Reporter
-                                    </button>
+                                        {% if notification_sent %}
+                                        <button type="button" class="btn btn-notified" onclick="sendNotification('{{ search_data.id }}', '{{ person_id }}', '{{ full_name }}', true)" title="Notification already sent. Click to send another.">
+                                            <i class="fas fa-check-circle"></i>
+                                            Reporter Notified · Send Another
+                                            <span class="notification-badge">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn btn-notify" onclick="sendNotification('{{ search_data.id }}', '{{ person_id }}', '{{ full_name }}', false)">
+                                            <i class="fas fa-bell"></i>
+                                            Notify Reporter
+                                        </button>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </div>
@@ -1008,8 +1054,12 @@ function viewImage(imageSrc) {
 }
 
 // Send notification to missing person reporter
-async function sendNotification(searchId, personId, personName) {
-    if (!confirm(`Send notification to the reporter of ${personName}?\n\nThis will notify the reporter that their missing person has been potentially identified.`)) {
+async function sendNotification(searchId, personId, personName, isResend) {
+    const confirmMessage = isResend
+        ? `Send another notification to the reporter of ${personName}?\n\n⚠️ A notification has already been sent for this search.\n\nThis will send a duplicate notification to the reporter.`
+        : `Send notification to the reporter of ${personName}?\n\nThis will notify the reporter that their missing person has been potentially identified.`;
+
+    if (!confirm(confirmMessage)) {
         return;
     }
 
@@ -1037,10 +1087,21 @@ async function sendNotification(searchId, personId, personName) {
 
         // Success
         if (window.toast) {
-            window.toast.success('Success', data.message || 'Notification sent successfully to reporter');
+            const successMessage = isResend
+                ? 'Another notification sent successfully to reporter'
+                : 'Notification sent successfully to reporter';
+            window.toast.success('Success', data.message || successMessage);
         } else {
-            alert('Success: Notification sent successfully to reporter');
+            const successMessage = isResend
+                ? 'Success: Another notification sent successfully to reporter'
+                : 'Success: Notification sent successfully to reporter';
+            alert(successMessage);
         }
+
+        // Reload page to update button state
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
 
     } catch (error) {
         console.error('Notification error:', error);
