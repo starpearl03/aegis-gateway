@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class AlertBroadcastService:
-    """Service for managing and sending alert broadcasts to locals in specific areas."""
+    """Service for managing and sending alert broadcasts to all registered contacts."""
 
     def __init__(self):
         self.alert_repo = AlertBroadcastRepository()
@@ -38,40 +38,37 @@ class AlertBroadcastService:
         self.location_repo = LocationRepository()
         self.notification_service = NotificationService()
 
-        # Load location contact data
-        self.location_contacts = self._load_location_contacts()
+        # Load contact numbers
+        self.contacts = self._load_contacts()
 
-    def _load_location_contacts(self) -> Dict[str, List[str]]:
+    def _load_contacts(self) -> List[str]:
         """
-        Load location-based contact numbers from JSON file.
+        Load contact numbers from JSON file.
 
         Returns:
-            Dictionary mapping location IDs to lists of phone numbers
+            List of phone numbers
         """
         try:
             data_file = "broadcast_contacts.json"
 
             if not os.path.exists(data_file):
-                logger.warning(f"Location contacts file not found: {data_file}")
-                return {}
+                logger.warning(f"Contacts file not found: {data_file}")
+                return []
 
             with open(data_file, 'r') as f:
                 data = json.load(f)
-                logger.info(f"Loaded contact data for {len(data.get('locations', []))} locations")
+                contacts = data.get('contacts', [])
 
-                # Convert to dictionary for easy lookup
-                contacts_map = {}
-                for location in data.get('locations', []):
-                    location_id = location.get('location_id')
-                    contacts = location.get('contacts', [])
-                    if location_id and contacts:
-                        contacts_map[location_id] = contacts
+                if not contacts:
+                    logger.warning("No contacts found in broadcast_contacts.json")
+                    return []
 
-                return contacts_map
+                logger.info(f"Loaded {len(contacts)} contact numbers from broadcast_contacts.json")
+                return contacts
 
         except Exception as e:
-            logger.error(f"Error loading location contacts: {e}", exc_info=True)
-            return {}
+            logger.error(f"Error loading contacts: {e}", exc_info=True)
+            return []
 
     # ========================================================================
     # ALERT BROADCAST MANAGEMENT
@@ -96,8 +93,8 @@ class AlertBroadcastService:
         if not hotspot:
             raise NotFoundException(f"Crime hotspot with ID {request.hotspot_id} not found")
 
-        # Get recipient count from location contacts
-        recipient_count = self._get_recipient_count(hotspot.location_id)
+        # Get recipient count
+        recipient_count = len(self.contacts)
 
         try:
             alert = AlertBroadcast(
@@ -115,60 +112,62 @@ class AlertBroadcastService:
         except Exception as e:
             raise ValidationException(f"Failed to create alert broadcast: {str(e)}")
 
-    def get_recipient_count(self, location_id: str) -> int:
-        """Get the number of recipients for a location (public method)."""
-        return self._get_recipient_count(location_id)
-
-    def send_alert_broadcast(self, alert_id: str) -> AlertBroadcastResponse:
+    def get_recipient_count(self, location_id: str = None) -> int:
         """
-        Send an alert broadcast to all contacts in the hotspot's location.
+        Get the number of recipients (location_id not used, kept for compatibility).
+
+        Args:
+            location_id: Not used, kept for backward compatibility
+
+        Returns:
+            Number of recipients
+        """
+        return len(self.contacts)
+
+    def send_alert_broadcast(self, alert_id: str, is_resend: bool = False) -> AlertBroadcastResponse:
+        """
+        Send an alert broadcast to all contacts.
 
         Args:
             alert_id: Alert broadcast ID
+            is_resend: Whether this is a resend operation (allows sending already-sent alerts)
 
         Returns:
             Updated AlertBroadcastResponse DTO
 
         Raises:
-            NotFoundException: If alert or location not found
-            ValidationException: If alert already sent or has no recipients
+            NotFoundException: If alert not found
+            ValidationException: If alert already sent (unless is_resend=True) or has no recipients
         """
         # Get alert
         alert = self.alert_repo.find_by_id(alert_id)
         if not alert:
             raise NotFoundException(f"Alert broadcast with ID {alert_id} not found")
 
-        # Check if already sent
-        if alert.status == BroadcastStatus.SENT:
-            raise ValidationException("Alert broadcast has already been sent")
+        # Check if already sent (only block if not a resend)
+        if not is_resend and alert.status == BroadcastStatus.SENT:
+            raise ValidationException("Alert broadcast has already been sent. Use resend if you want to send it again.")
 
-        # Get hotspot and location
+        # Get hotspot (for logging purposes)
         hotspot = self.hotspot_repo.find_by_id(alert.hotspot_id)
         if not hotspot:
             raise NotFoundException(f"Crime hotspot with ID {alert.hotspot_id} not found")
 
-        location = self.location_repo.find_by_id(hotspot.location_id)
-        if not location:
-            raise NotFoundException(f"Location with ID {hotspot.location_id} not found")
-
-        # Get contact numbers for this location
-        contact_numbers = self._get_location_contacts(hotspot.location_id)
-
-        if not contact_numbers:
-            logger.warning(f"No contacts found for location {hotspot.location_id}")
+        # Check if we have contacts
+        if not self.contacts:
+            logger.warning("No contacts available for broadcast")
             alert.status = BroadcastStatus.FAILED
             alert.recipient_count = 0
             self.alert_repo.update(alert)
-            raise ValidationException(
-                f"No contact numbers available for location: {location.city or location.address}"
-            )
+            raise ValidationException("No contact numbers available for broadcast")
 
         try:
-            logger.info(f"Sending alert broadcast to {len(contact_numbers)} recipients in {location.city}")
+            action = "Resending" if is_resend else "Sending"
+            logger.info(f"{action} alert broadcast to {len(self.contacts)} recipients")
 
             # Send SMS broadcast
             broadcast_request = BroadcastSMSRequest(
-                mobile_numbers=contact_numbers,
+                mobile_numbers=self.contacts,
                 message=alert.message
             )
 
@@ -181,7 +180,7 @@ class AlertBroadcastService:
             if result.success and result.successful_sends > 0:
                 alert.status = BroadcastStatus.SENT
                 logger.info(
-                    f"Alert broadcast {alert_id} sent successfully to "
+                    f"Alert broadcast {alert_id} {'resent' if is_resend else 'sent'} successfully to "
                     f"{result.successful_sends}/{result.total_recipients} recipients"
                 )
             else:
@@ -198,6 +197,19 @@ class AlertBroadcastService:
             self.alert_repo.update(alert)
             logger.error(f"Error sending alert broadcast {alert_id}: {e}", exc_info=True)
             raise InternalServerException(f"Failed to send alert broadcast: {str(e)}")
+
+    def resend_alert_broadcast(self, alert_id: str) -> AlertBroadcastResponse:
+        """
+        Resend an already-sent alert broadcast.
+        This is a convenience wrapper around send_alert_broadcast with is_resend=True.
+
+        Args:
+            alert_id: Alert broadcast ID
+
+        Returns:
+            Updated AlertBroadcastResponse DTO
+        """
+        return self.send_alert_broadcast(alert_id, is_resend=True)
 
     def update_alert_broadcast(self, request: UpdateAlertBroadcastRequest) -> AlertBroadcastResponse:
         """
@@ -325,31 +337,6 @@ class AlertBroadcastService:
     # ========================================================================
     # HELPER METHODS
     # ========================================================================
-
-    def _get_location_contacts(self, location_id: str) -> List[str]:
-        """
-        Get contact numbers for a specific location.
-
-        Args:
-            location_id: Location ID
-
-        Returns:
-            List of phone numbers
-        """
-        return self.location_contacts.get(location_id, [])
-
-    def _get_recipient_count(self, location_id: str) -> int:
-        """
-        Get the number of recipients for a location.
-
-        Args:
-            location_id: Location ID
-
-        Returns:
-            Number of recipients
-        """
-        contacts = self._get_location_contacts(location_id)
-        return len(contacts)
 
     def _build_alert_broadcast_response(self, alert: AlertBroadcast) -> AlertBroadcastResponse:
         """Build AlertBroadcastResponse DTO from entity."""

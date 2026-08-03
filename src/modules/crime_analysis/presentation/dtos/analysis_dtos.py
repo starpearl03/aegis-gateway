@@ -197,6 +197,7 @@ class CrimeHotspotResponse:
     is_missing_person_hotspot: bool
     risk_level: str
     location: Optional[Dict[str, Any]]
+    color: Optional[str]
     created_at: str
     updated_at: str
 
@@ -211,6 +212,7 @@ class CrimeHotspotResponse:
             'is_missing_person_hotspot': self.is_missing_person_hotspot,
             'risk_level': self.risk_level,
             'location': self.location,
+            'color': self.color,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
