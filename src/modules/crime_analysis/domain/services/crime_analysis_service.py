@@ -1,4 +1,5 @@
 # src/modules/analysis/application/services/crime_analysis_service.py
+import json
 from typing import Type
 from datetime import datetime
 import logging
@@ -132,11 +133,13 @@ class CrimeAnalysisService:
             # Step 6: Convert detected hotspots to preview format WITH FULL LOCATION DATA
             hotspots_data = []
             if request.include_hotspots:
-                for idx, hotspot in enumerate(detected_hotspots):
+                logger.info(f"Processing {len(detected_hotspots)} hotspots for preview")
+
+                for idx, detected_hotspot in enumerate(detected_hotspots):
                     # Fetch location details for map visualization
                     location_data = None
-                    if hotspot.location_id:
-                        location = self.record_repos['location'].find_by_id(hotspot.location_id)
+                    if detected_hotspot.location_id:
+                        location = self.record_repos['location'].find_by_id(detected_hotspot.location_id)
                         if location:
                             location_data = {
                                 'id': location.id,
@@ -148,20 +151,33 @@ class CrimeAnalysisService:
                                 'country': location.country
                             }
 
-                    # Add preview ID and timestamps
+                    # Create temporary CrimeHotspot for color calculation
+                    temp_hotspot = CrimeHotspot(
+                        location_id=detected_hotspot.location_id,
+                        analysis_id='preview',
+                        incident_count=detected_hotspot.incident_count,
+                        crime_type=detected_hotspot.crime_type,
+                        is_missing_person_hotspot=detected_hotspot.is_missing_person_hotspot,
+                        risk_level=self._get_enum_by_value(RiskLevel, detected_hotspot.risk_level)
+                    )
+
+                    # Build hotspot dictionary
                     hotspot_dict = {
                         'id': f"preview-hotspot-{idx + 1}",
-                        'location_id': hotspot.location_id,
+                        'location_id': detected_hotspot.location_id,
                         'analysis_id': 'preview',
-                        'incident_count': hotspot.incident_count,
-                        'crime_type': hotspot.crime_type,
-                        'is_missing_person_hotspot': hotspot.is_missing_person_hotspot,
-                        'risk_level': hotspot.risk_level,
-                        'location': location_data,  # ✅ Full location data for map
+                        'incident_count': detected_hotspot.incident_count,
+                        'crime_type': detected_hotspot.crime_type,
+                        'is_missing_person_hotspot': detected_hotspot.is_missing_person_hotspot,
+                        'risk_level': detected_hotspot.risk_level,
+                        'location': location_data,
+                        'color': self._get_hotspot_color(temp_hotspot),
                         'created_at': datetime.now().isoformat(),
                         'updated_at': datetime.now().isoformat()
                     }
                     hotspots_data.append(hotspot_dict)
+
+                logger.info(f"Preview hotspots processed: {len(hotspots_data)}")
 
             # Step 7: Process trends from LLM response
             trends_data = []
@@ -612,7 +628,7 @@ class CrimeAnalysisService:
 
         for hotspot in hotspots:
             # Only create alerts for high and critical risk hotspots
-            if hotspot.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL]:
+            if hotspot.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL]: # can add RiskLevel.MEDIUM
                 try:
                     location = self.record_repos['location'].find_by_id(hotspot.location_id)
                     if not location:
@@ -755,58 +771,109 @@ class CrimeAnalysisService:
     ) -> IndividualCrimeMapDataResponse:
         """
         Get tactical map visualization data (individual crime locations).
-        This is the detailed view for investigation and analysis.
-
-        Args:
-            request: GetIndividualCrimeMapDataRequest DTO
-
-        Returns:
-            IndividualCrimeMapDataResponse DTO with crime locations and crime-type coloring
-
-        Raises:
-            InternalServerException: If data retrieval fails
         """
         try:
             # Parse dates
             start_date = datetime.fromisoformat(request.start_date)
             end_date = datetime.fromisoformat(request.end_date)
 
-            # Fetch crimes from database
+            # Fetch crimes and missing persons from database
             crimes = self.record_repos['crime'].find_by_date_range(start_date, end_date)
+            missing_persons = self.record_repos['missing_person'].find_by_date_range(start_date, end_date)
+
+            # ✅ NEW: Get all unique crime types and generate color mapping
+            unique_crime_types = set()
+            for crime in crimes:
+                if crime.crime_type:
+                    unique_crime_types.add(crime.crime_type.lower().strip())
+
+            # Generate color mapping for unique crime types
+            crime_type_colors = self._generate_color_palette(list(unique_crime_types))
+
+            # Always include missing person color
+            crime_type_colors['missing_person'] = '#FF69B4'
 
             # Filter by crime type if specified
             if request.crime_types:
                 crimes = [c for c in crimes if c.crime_type in request.crime_types]
 
             # Apply limit for performance
+            total_incidents = len(crimes) + len(missing_persons)
             limited = False
-            if request.limit and len(crimes) > request.limit:
-                logger.warning(f"Limiting crimes from {len(crimes)} to {request.limit} for map performance")
-                crimes = crimes[:request.limit]
+            if request.limit and total_incidents > request.limit:
+                crime_ratio = len(crimes) / total_incidents
+                missing_ratio = len(missing_persons) / total_incidents
+                crimes_limit = max(1, int(request.limit * crime_ratio))
+                missing_limit = max(1, int(request.limit * missing_ratio))
+                crimes = crimes[:crimes_limit]
+                missing_persons = missing_persons[:missing_limit]
                 limited = True
 
             # Build crime markers
             crime_markers = []
             for crime in crimes:
                 if crime.location:
-                    crime_markers.append({
-                        'id': crime.id,
-                        'latitude': float(crime.location.latitude),
-                        'longitude': float(crime.location.longitude),
-                        'crime_type': crime.crime_type,
-                        'date_committed': crime.date_committed.isoformat() if crime.date_committed else None,
-                        'status': crime.status.value,
-                        'severity': crime.severity.value if hasattr(crime, 'severity') else 'unknown',
-                        'description': crime.description[:100] if crime.description else '',
-                        'address': crime.location.address,
-                        'city': crime.location.city,
-                        'color': self._get_crime_type_color(crime.crime_type)
-                    })
+                    lat_valid = crime.location.latitude is not None
+                    lng_valid = crime.location.longitude is not None
 
-            logger.info(f"Retrieved {len(crime_markers)} crime markers for tactical map view")
+                    if lat_valid and lng_valid:
+                        try:
+                            normalized_type = crime.crime_type.lower().strip() if crime.crime_type else 'unknown'
+                            marker_data = {
+                                'id': crime.id,
+                                'latitude': float(crime.location.latitude),
+                                'longitude': float(crime.location.longitude),
+                                'crime_type': crime.crime_type,
+                                'date_committed': crime.date_committed.isoformat() if crime.date_committed else None,
+                                'status': crime.status.value,
+                                'severity': crime.severity.value if hasattr(crime, 'severity') else 'unknown',
+                                'description': crime.description[:100] if crime.description else '',
+                                'address': crime.location.address,
+                                'city': crime.location.city,
+                                'color': crime_type_colors.get(normalized_type, '#808080'),  # ✅ Use generated color
+                                'type': 'crime'
+                            }
+                            crime_markers.append(marker_data)
+                        except (ValueError, TypeError):
+                            continue
+
+            # Build missing person markers
+            for mp in missing_persons:
+                if mp.last_seen_location:
+                    lat_valid = mp.last_seen_location.latitude is not None
+                    lng_valid = mp.last_seen_location.longitude is not None
+
+                    if lat_valid and lng_valid:
+                        try:
+                            first_name = getattr(mp, 'first_name', 'Unknown')
+                            last_name = getattr(mp, 'last_name', '')
+                            full_name = f"{first_name} {last_name}".strip()
+
+                            marker_data = {
+                                'id': mp.id,
+                                'latitude': float(mp.last_seen_location.latitude),
+                                'longitude': float(mp.last_seen_location.longitude),
+                                'crime_type': 'missing_person',
+                                'date_committed': mp.last_seen_date.isoformat() if mp.last_seen_date else None,
+                                'status': mp.status.value,
+                                'severity': 'high',
+                                'description': f"Missing: {full_name}",
+                                'address': mp.last_seen_location.address,
+                                'city': mp.last_seen_location.city,
+                                'color': crime_type_colors['missing_person'],  # ✅ Use generated color
+                                'type': 'missing_person'
+                            }
+                            crime_markers.append(marker_data)
+                        except (ValueError, TypeError):
+                            continue
+
+            crimes_count = len([m for m in crime_markers if m.get('type') == 'crime'])
+            missing_count = len([m for m in crime_markers if m.get('type') == 'missing_person'])
+
+            logger.info(f"Retrieved {len(crime_markers)} markers for tactical map view")
 
             return IndividualCrimeMapDataResponse(
-                message=f'Found {len(crime_markers)} crime(s) for tactical map view',
+                message=f'Found {len(crime_markers)} incident(s) for tactical map view',
                 crimes=crime_markers,
                 total=len(crime_markers),
                 limited=limited,
@@ -818,30 +885,41 @@ class CrimeAnalysisService:
             logger.error(f"Failed to get individual crime map data: {str(e)}", exc_info=True)
             raise InternalServerException(f"Failed to get individual crime map data: {str(e)}")
 
-    def _get_crime_type_color(self, crime_type: Optional[str]) -> str:
-        """Get color code for crime type."""
-        if not crime_type:
-            return '#808080'  # Gray for unknown
+    def _generate_color_palette(self, crime_types: List[str]) -> Dict[str, str]:
+        """
+        Generate a color palette for unique crime types.
+        Each crime type gets a distinct color.
 
-        color_map = {
-            'murder': '#8B0000',
-            'homicide': '#8B0000',
-            'assault': '#DC143C',
-            'robbery': '#FF4500',
-            'burglary': '#FF8C00',
-            'theft': '#FFD700',
-            'larceny': '#FFD700',
-            'vandalism': '#9370DB',
-            'drug': '#8B4513',
-            'drugs': '#8B4513',
-            'fraud': '#4B0082',
-            'kidnapping': '#8B008B',
-            'arson': '#FF6347',
-            'domestic violence': '#B22222',
-            'sexual assault': '#800020',
-            'other': '#808080'
-        }
-        return color_map.get(crime_type.lower(), '#808080')
+        Args:
+            crime_types: List of unique crime types (already normalized to lowercase)
+
+        Returns:
+            Dictionary mapping crime type to hex color
+        """
+        # Predefined color palette (vibrant, distinguishable colors)
+        color_palette = [
+            '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+            '#FF8C00', '#8B0000', '#006400', '#00008B', '#FFD700', '#8B008B',
+            '#DC143C', '#00CED1', '#FF1493', '#1E90FF', '#32CD32', '#FF4500',
+            '#9370DB', '#00FA9A', '#FF6347', '#4169E1', '#ADFF2F', '#FF69B4',
+            '#87CEEB', '#FFA500', '#BA55D3', '#20B2AA', '#F08080', '#7B68EE',
+            '#98FB98', '#DDA0DD', '#B0E0E6', '#FFDAB9', '#EE82EE', '#F0E68C',
+            '#E6E6FA', '#FFF0F5', '#FAEBD7', '#FFE4E1'
+        ]
+
+        if not crime_types:
+            return {}
+
+        # Sort crime types for consistency
+        sorted_types = sorted(crime_types)
+
+        # Map each crime type to a color
+        color_mapping = {}
+        for i, crime_type in enumerate(sorted_types):
+            # Use modulo to cycle through colors if we have more crime types than colors
+            color_mapping[crime_type] = color_palette[i % len(color_palette)]
+
+        return color_mapping
 
     # ========================================================================
     # GENERIC HELPER METHODS
@@ -1010,6 +1088,10 @@ class CrimeAnalysisService:
                     data['location'] = None
             else:
                 data['location'] = None
+
+            # ✅ ADD COLOR FOR HOTSPOTS
+            if 'color' in response_fields:
+                data['color'] = self._get_hotspot_color(entity)
 
         return response_class(**data)
 

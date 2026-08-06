@@ -32,6 +32,7 @@ class HotspotDetector:
     """
     Detects crime hotspots using DBSCAN clustering algorithm.
     Groups crimes and missing persons within a specified radius.
+    Now clusters by crime type separately to avoid losing information.
     """
 
     def __init__(self, radius_km: float = 2.0, min_incidents: int = 3):
@@ -53,6 +54,7 @@ class HotspotDetector:
     ) -> List[HotspotData]:
         """
         Detect hotspots from crimes and missing persons using DBSCAN clustering.
+        Now clusters each crime type separately to preserve all information.
 
         Args:
             crimes: List of Crime entities
@@ -62,29 +64,77 @@ class HotspotDetector:
             List of HotspotData objects representing detected hotspots
         """
         logger.info(f"Starting hotspot detection with radius={self.radius_km}km, "
-                   f"min_incidents={self.min_incidents}")
+                    f"min_incidents={self.min_incidents}")
         logger.info(f"Input: {len(crimes)} crimes, {len(missing_persons)} missing persons")
 
-        # Extract location data from crimes and missing persons
+        all_hotspots = []
+
+        # ✅ Process missing persons as a separate group
+        if missing_persons:
+            missing_locations = self._extract_missing_person_locations(missing_persons)
+            if missing_locations:
+                logger.info(f"Clustering {len(missing_locations)} missing person locations")
+                missing_hotspots = self._cluster_and_build_hotspots(
+                    missing_locations,
+                    crime_type='missing_person',
+                    is_missing_person=True
+                )
+                all_hotspots.extend(missing_hotspots)
+                logger.info(f"Created {len(missing_hotspots)} missing person hotspots")
+
+        # ✅ Group crimes by crime_type
         crime_locations = self._extract_crime_locations(crimes)
-        missing_locations = self._extract_missing_person_locations(missing_persons)
+        if crime_locations:
+            crimes_by_type = defaultdict(list)
+            for location in crime_locations:
+                crime_type = location['crime_type'] or 'unknown'
+                crimes_by_type[crime_type].append(location)
 
-        # Combine all locations
-        all_locations = crime_locations + missing_locations
+            # ✅ Cluster each crime type separately
+            for crime_type, locations in crimes_by_type.items():
+                logger.info(f"Clustering {len(locations)} {crime_type} locations")
+                crime_hotspots = self._cluster_and_build_hotspots(
+                    locations,
+                    crime_type=crime_type,
+                    is_missing_person=False
+                )
+                all_hotspots.extend(crime_hotspots)
+                logger.info(f"Created {len(crime_hotspots)} {crime_type} hotspots")
 
-        if not all_locations:
-            logger.warning("No locations found for clustering")
+        # Sort all hotspots by incident count (descending)
+        all_hotspots.sort(key=lambda h: h.incident_count, reverse=True)
+
+        logger.info(f"Detected {len(all_hotspots)} total hotspots across all crime types")
+        return all_hotspots
+
+    def _cluster_and_build_hotspots(
+            self,
+            locations: List[Dict[str, Any]],
+            crime_type: str,
+            is_missing_person: bool
+    ) -> List[HotspotData]:
+        """
+        Cluster a specific group of locations and build hotspots.
+
+        Args:
+            locations: List of location dictionaries (all same crime type)
+            crime_type: The crime type for these locations
+            is_missing_person: Whether these are missing person incidents
+
+        Returns:
+            List of HotspotData objects for this crime type
+        """
+        if len(locations) < self.min_incidents:
+            logger.debug(f"Skipping {crime_type}: only {len(locations)} incidents "
+                         f"(minimum required: {self.min_incidents})")
             return []
 
-        logger.info(f"Total locations to cluster: {len(all_locations)}")
-
         # Perform clustering
-        clusters = self._cluster_locations(all_locations)
+        cluster_labels = self._cluster_locations(locations)
 
         # Build hotspots from clusters
-        hotspots = self._build_hotspots(clusters, all_locations)
+        hotspots = self._build_hotspots(cluster_labels, locations, crime_type, is_missing_person)
 
-        logger.info(f"Detected {len(hotspots)} hotspots")
         return hotspots
 
     def _extract_crime_locations(self, crimes: List[Crime]) -> List[Dict[str, Any]]:
@@ -165,21 +215,25 @@ class HotspotDetector:
         num_clusters = len(unique_clusters - {-1})  # Exclude noise (-1)
         num_noise = list(cluster_labels).count(-1)
 
-        logger.info(f"Clustering complete: {num_clusters} clusters, {num_noise} noise points")
+        logger.debug(f"Clustering complete: {num_clusters} clusters, {num_noise} noise points")
 
         return cluster_labels
 
     def _build_hotspots(
             self,
             cluster_labels: np.ndarray,
-            locations: List[Dict[str, Any]]
+            locations: List[Dict[str, Any]],
+            crime_type: str,
+            is_missing_person: bool
     ) -> List[HotspotData]:
         """
         Build hotspot data structures from clusters.
 
         Args:
             cluster_labels: Array of cluster labels from DBSCAN
-            locations: List of location dictionaries
+            locations: List of location dictionaries (all same crime type)
+            crime_type: The crime type for these hotspots
+            is_missing_person: Whether these are missing person hotspots
 
         Returns:
             List of HotspotData objects
@@ -193,7 +247,12 @@ class HotspotDetector:
         hotspots = []
 
         for cluster_id, cluster_locations in clusters.items():
-            hotspot = self._create_hotspot_from_cluster(cluster_id, cluster_locations)
+            hotspot = self._create_hotspot_from_cluster(
+                cluster_id,
+                cluster_locations,
+                crime_type,
+                is_missing_person
+            )
             hotspots.append(hotspot)
 
         # Sort hotspots by incident count (descending)
@@ -204,14 +263,18 @@ class HotspotDetector:
     def _create_hotspot_from_cluster(
             self,
             cluster_id: int,
-            cluster_locations: List[Dict[str, Any]]
+            cluster_locations: List[Dict[str, Any]],
+            crime_type: str,
+            is_missing_person: bool
     ) -> HotspotData:
         """
         Create a HotspotData object from a cluster of locations.
 
         Args:
             cluster_id: Cluster identifier
-            cluster_locations: List of locations in this cluster
+            cluster_locations: List of locations in this cluster (all same crime type)
+            crime_type: The crime type for this hotspot
+            is_missing_person: Whether this is a missing person hotspot
 
         Returns:
             HotspotData object
@@ -220,33 +283,25 @@ class HotspotDetector:
         avg_lat = float(np.mean([loc['latitude'] for loc in cluster_locations]))
         avg_lng = float(np.mean([loc['longitude'] for loc in cluster_locations]))
 
-        # Find the most representative location_id (most common or closest to centroid)
+        # Find the most representative location_id (closest to centroid)
         location_id = self._get_representative_location_id(cluster_locations, avg_lat, avg_lng)
 
-        # Determine if it's primarily a missing person hotspot
-        missing_count = sum(1 for loc in cluster_locations if loc['type'] == 'missing_person')
-        crime_count = len(cluster_locations) - missing_count
-        is_missing_person_hotspot = missing_count > crime_count
-
-        # Determine predominant crime type (if applicable)
-        crime_type = None
-        if not is_missing_person_hotspot:
-            crime_types = [loc['crime_type'] for loc in cluster_locations
-                           if loc['crime_type'] is not None]
-            if crime_types:
-                crime_type = max(set(crime_types), key=crime_types.count)
+        # Incident count
+        incident_count = len(cluster_locations)
 
         # Calculate risk level based on incident count
-        incident_count = len(cluster_locations)
-        risk_level = self._calculate_risk_level(incident_count, is_missing_person_hotspot)
+        risk_level = self._calculate_risk_level(incident_count, is_missing_person)
+
+        # Set crime_type (None for missing persons)
+        hotspot_crime_type = None if is_missing_person else crime_type
 
         return HotspotData(
             location_id=location_id,
             latitude=avg_lat,
             longitude=avg_lng,
             incident_count=incident_count,
-            crime_type=crime_type,
-            is_missing_person_hotspot=is_missing_person_hotspot,
+            crime_type=hotspot_crime_type,
+            is_missing_person_hotspot=is_missing_person,
             risk_level=risk_level,
             cluster_id=cluster_id,
             incidents=cluster_locations
@@ -332,23 +387,32 @@ class HotspotDetector:
                 'total_hotspots': 0,
                 'total_incidents': 0,
                 'by_risk_level': {},
-                'by_type': {}
+                'by_type': {},
+                'by_crime_type': {}
             }
 
         total_incidents = sum(h.incident_count for h in hotspots)
 
         risk_level_counts = defaultdict(int)
         type_counts = defaultdict(int)
+        crime_type_counts = defaultdict(int)
 
         for hotspot in hotspots:
             risk_level_counts[hotspot.risk_level] += 1
-            type_key = 'missing_person' if hotspot.is_missing_person_hotspot else 'crime'
-            type_counts[type_key] += 1
+
+            if hotspot.is_missing_person_hotspot:
+                type_counts['missing_person'] += 1
+                crime_type_counts['missing_person'] += 1
+            else:
+                type_counts['crime'] += 1
+                crime_type = hotspot.crime_type or 'unknown'
+                crime_type_counts[crime_type] += 1
 
         return {
             'total_hotspots': len(hotspots),
             'total_incidents': total_incidents,
             'avg_incidents_per_hotspot': total_incidents / len(hotspots),
             'by_risk_level': dict(risk_level_counts),
-            'by_type': dict(type_counts)
+            'by_type': dict(type_counts),
+            'by_crime_type': dict(crime_type_counts)  # ✅ NEW: breakdown by specific crime types
         }

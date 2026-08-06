@@ -147,6 +147,9 @@ def preview_analysis():
             'preview_alerts': []  # Preview of alerts that would be sent
         }
 
+        current_app.logger.info(f"current hotspots : {preview_response.hotspots}")
+        current_app.logger.info(f"current individual_crimes : {crime_map_response.crimes}")
+
         # Generate preview alerts for high/critical hotspots (not saved or sent)
         for hotspot in preview_response.hotspots:
             risk_level = hotspot.get('risk_level', '').lower()
@@ -506,6 +509,42 @@ def send_alert(alert_id):
         response = ApiResponse.failure(error=error_detail)
         return jsonify(response.to_dict()), response.get_status_code()
 
+@analysis_bp.route('/alerts/<string:alert_id>/resend', methods=['POST'])
+@auth.login_required
+@auth.role_required('admin')
+def resend_alert(alert_id):
+    """Resend an alert broadcast - AJAX endpoint"""
+    try:
+        # Resend alert
+        response = alert_service.resend_alert_broadcast(alert_id)
+
+        flash('Alert broadcast resent successfully!', 'success')
+
+        # Create success response
+        api_response = ApiResponse.success(
+            value=response.to_dict(),
+            message='Alert broadcast resent successfully!'
+        )
+
+        return jsonify(api_response.to_dict()), api_response.get_status_code()
+
+    except AppException as e:
+        error_detail = ErrorDetail(
+            title="Failed to Resend Alert",
+            details=[str(e)],
+            status=e.status_code
+        )
+        response = ApiResponse.failure(error=error_detail, message=str(e))
+        return jsonify(response.to_dict()), response.get_status_code()
+
+    except Exception as e:
+        error_detail = ErrorDetail(
+            title="Unexpected Error",
+            details=[f"An error occurred: {str(e)}"],
+            status=500
+        )
+        response = ApiResponse.failure(error=error_detail)
+        return jsonify(response.to_dict()), response.get_status_code()
 
 @analysis_bp.route('/alerts/pending', methods=['GET'])
 @auth.login_required

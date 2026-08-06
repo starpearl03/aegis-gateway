@@ -22,12 +22,57 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
 /* ===========================
-   PAGE LAYOUT
+   PAGE LAYOUT - NEW GRID SYSTEM
    =========================== */
 .page-container {
     display: flex;
     flex-direction: column;
     gap: 24px;
+}
+
+.layout-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.layout-full {
+    grid-column: 1 / -1;
+}
+
+.layout-left {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.layout-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Reduced gap for compact layout */
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100vh - 48px);
+}
+
+.sidebar-scroll {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
 }
 
 /* ===========================
@@ -268,7 +313,7 @@
 }
 
 /* ===========================
-   MAP SECTION - CRITICAL: NO BACKDROP ON MAP ITSELF
+   MAP SECTION
    =========================== */
 .map-section {
     background: transparent;
@@ -286,10 +331,9 @@
     gap: 16px;
 }
 
-/* MAP CONTAINER - ABSOLUTELY NO EFFECTS */
 #mapContainer {
     width: 100%;
-    height: 500px;
+    height: 600px;
     background: #1a1d2e;
     position: relative;
 }
@@ -297,15 +341,6 @@
 .leaflet-container {
     background: #1a1d2e;
     font-family: inherit;
-}
-
-/* ===========================
-   CONTENT GRID
-   =========================== */
-.content-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
 }
 
 /* ===========================
@@ -317,15 +352,18 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .card-header {
-    padding: 18px 20px;
+    padding: 16px 20px; /* Reduced padding for compact layout */
     border-bottom: 1px solid var(--border);
     background: transparent;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .card-title {
@@ -352,11 +390,11 @@
 }
 
 .card-body {
-    padding: 20px;
-    max-height: 500px;
+    padding: 16px; /* Reduced padding for compact layout */
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
+    flex: 1;
 }
 
 .card-body::-webkit-scrollbar {
@@ -373,15 +411,35 @@
 }
 
 /* ===========================
-   LIST ITEMS
+   SIDEBAR CARDS - COMPACT & SPACIOUS
+   =========================== */
+.sidebar-card {
+    max-height: none; /* Remove fixed height for vertical expansion */
+    min-height: 200px; /* Minimum height for visibility */
+    flex: 1; /* Allow cards to expand and fill available space */
+    margin-bottom: 0; /* Remove bottom margin since gap is handled by parent */
+}
+
+.sidebar-card .card-body {
+    max-height: none; /* Remove fixed max-height for vertical expansion */
+    padding: 12px 16px; /* Further reduced padding for compact content */
+}
+
+/* Ensure proper spacing between sidebar cards */
+.layout-right .sidebar-card {
+    margin-bottom: 0;
+}
+
+/* ===========================
+   LIST ITEMS - COMPACT
    =========================== */
 .list-item {
-    padding: 14px;
+    padding: 12px; /* Reduced padding */
     background: rgba(10, 14, 39, 0.3);
     backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    margin-bottom: 10px;
+    margin-bottom: 8px; /* Reduced margin between items */
     transition: var(--transition);
 }
 
@@ -398,7 +456,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px; /* Reduced margin */
 }
 
 .item-title {
@@ -450,13 +508,13 @@
     font-size: 13px;
     color: var(--text-secondary);
     line-height: 1.5;
-    margin-bottom: 8px;
+    margin-bottom: 6px; /* Reduced margin */
 }
 
 .item-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px; /* Reduced gap */
     font-size: 12px;
     color: var(--text-muted);
 }
@@ -473,15 +531,15 @@
 }
 
 /* ===========================
-   ALERT ITEM
+   ALERT ITEM - COMPACT
    =========================== */
 .alert-item {
-    padding: 16px;
+    padding: 14px; /* Reduced padding */
     background: rgba(10, 14, 39, 0.3);
     backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    margin-bottom: 12px;
+    margin-bottom: 10px; /* Reduced margin */
 }
 
 .alert-item:last-child {
@@ -492,7 +550,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px; /* Reduced margin */
 }
 
 .alert-location {
@@ -539,8 +597,8 @@
     font-size: 13px;
     color: var(--text-secondary);
     line-height: 1.6;
-    margin-bottom: 10px;
-    padding: 10px;
+    margin-bottom: 8px; /* Reduced margin */
+    padding: 8px; /* Reduced padding */
     background: rgba(10, 14, 39, 0.3);
     border-radius: var(--radius-sm);
 }
@@ -551,6 +609,8 @@
     align-items: center;
     font-size: 12px;
     color: var(--text-muted);
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .alert-recipients {
@@ -561,6 +621,20 @@
 
 .alert-recipients i {
     color: var(--primary-gold);
+}
+
+.alert-sent-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.alert-sent-info i {
+    color: var(--success);
 }
 
 .alert-actions {
@@ -593,18 +667,41 @@
     border-color: var(--info);
 }
 
+.alert-btn-resend {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.alert-btn-resend:hover {
+    background: var(--warning);
+    color: white;
+    border-color: var(--warning);
+}
+
+.alert-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.alert-btn:disabled:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
 /* ===========================
-   EMPTY STATE
+   EMPTY STATE - COMPACT
    =========================== */
 .empty-state {
     text-align: center;
-    padding: 40px 20px;
+    padding: 30px 20px; /* Reduced padding */
     color: var(--text-muted);
 }
 
 .empty-state i {
-    font-size: 48px;
-    margin-bottom: 12px;
+    font-size: 40px; /* Slightly smaller icon */
+    margin-bottom: 10px; /* Reduced margin */
     opacity: 0.5;
     color: var(--primary-gold);
 }
@@ -612,7 +709,7 @@
 .empty-state h3 {
     font-size: 16px;
     color: var(--text-primary);
-    margin-bottom: 6px;
+    margin-bottom: 6px; /* Reduced margin */
     font-weight: 600;
 }
 
@@ -684,9 +781,24 @@
 /* ===========================
    RESPONSIVE
    =========================== */
+@media (max-width: 1400px) {
+    .layout-grid {
+        grid-template-columns: 3fr 2fr;
+    }
+}
+
 @media (max-width: 1200px) {
-    .content-grid {
+    .layout-grid {
         grid-template-columns: 1fr;
+    }
+
+    .layout-right {
+        position: static;
+        max-height: none;
+    }
+
+    .sidebar-card {
+        max-height: none;
     }
 }
 
@@ -753,6 +865,19 @@
         width: 100%;
         justify-content: center;
     }
+
+    .alert-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .alert-actions {
+        width: 100%;
+    }
+
+    .alert-btn {
+        flex: 1;
+    }
 }
 
 /* Print styles */
@@ -764,6 +889,10 @@
     .alert-actions,
     #scrollToTop {
         display: none !important;
+    }
+
+    .layout-grid {
+        grid-template-columns: 1fr !important;
     }
 
     .content-card,
@@ -806,8 +935,8 @@
         </span>
     </div>
 
-    <!-- Analysis Summary Header -->
-    <div class="analysis-summary">
+    <!-- Analysis Summary Header - Full Width -->
+    <div class="analysis-summary layout-full">
         <div class="summary-content">
             <div class="summary-icon">
                 <i class="fas fa-chart-bar"></i>
@@ -863,255 +992,276 @@
         </div>
     </div>
 
-    <!-- Analysis Summary Text -->
-    <div class="analysis-text-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-file-alt"></i>
-                Analysis Summary
-            </h2>
-        </div>
-        <div class="section-body">
-            <div class="analysis-text">{{ summary_text }}</div>
-        </div>
-    </div>
-
-    <!-- Map Section -->
-    <div class="map-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-map-marked-alt"></i>
-                Map Visualization
-            </h2>
-            <div class="map-tabs">
-                <button type="button" class="map-tab active" onclick="switchMapView('hotspots')">
-                    <i class="fas fa-fire"></i>
-                    Hotspots
-                </button>
-                <button type="button" class="map-tab" onclick="switchMapView('crimes')">
-                    <i class="fas fa-map-pin"></i>
-                    Individual Crimes
-                </button>
+    <!-- Two Column Layout: Main Content (Left) + Sidebar (Right) -->
+    <div class="layout-grid">
+        <!-- LEFT COLUMN: Analysis Summary & Map -->
+        <div class="layout-left">
+            <!-- Analysis Summary Text -->
+            <div class="analysis-text-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-file-alt"></i>
+                        Analysis Summary
+                    </h2>
+                </div>
+                <div class="section-body">
+                    <div class="analysis-text">{{ summary_text }}</div>
+                </div>
             </div>
-        </div>
-        <div id="mapContainer"></div>
-    </div>
 
-    <!-- Content Grid -->
-    <div class="content-grid">
-        <!-- Hotspots Column -->
-        <div class="content-card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-fire"></i>
-                    Crime Hotspots
-                </h3>
-                <span class="card-count">{{ hotspots_list|length }}</span>
+            <!-- Map Section - Full Width in Left Column -->
+            <div class="map-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Map Visualization
+                    </h2>
+                    <div class="map-tabs">
+                        <button type="button" class="map-tab active" onclick="switchMapView('hotspots')">
+                            <i class="fas fa-fire"></i>
+                            Hotspots
+                        </button>
+                        <button type="button" class="map-tab" onclick="switchMapView('crimes')">
+                            <i class="fas fa-map-pin"></i>
+                            Individual Crimes
+                        </button>
+                    </div>
+                </div>
+                <div id="mapContainer"></div>
             </div>
-            <div class="card-body">
-                {% if hotspots_list and hotspots_list|length > 0 %}
-                    {% for hotspot in hotspots_list %}
-                        {% set location = hotspot.location if hotspot.location else {} %}
-                        {% set area = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
-                        {% set risk_level = hotspot.risk_level if hotspot.risk_level else 'low' %}
-                        {% set incident_count = hotspot.incident_count if hotspot.incident_count is defined else 0 %}
-                        {% set crime_type = hotspot.crime_type if hotspot.crime_type else '' %}
-                        {% set is_missing = hotspot.is_missing_person_hotspot if hotspot.is_missing_person_hotspot is defined else false %}
 
-                        <div class="list-item">
-                            <div class="item-header">
-                                <span class="item-title">{{ area }}</span>
-                                <span class="item-badge {{ risk_level }}">{{ risk_level }}</span>
-                            </div>
-                            <div class="item-meta">
-                                <span>
-                                    <i class="fas fa-exclamation-circle"></i>
-                                    {{ incident_count }} incidents
-                                </span>
-                                {% if crime_type %}
-                                <span>
-                                    <i class="fas fa-tag"></i>
-                                    {{ crime_type }}
-                                </span>
-                                {% endif %}
-                                <span>
-                                    <i class="fas fa-{{ 'user-slash' if is_missing else 'user-secret' }}"></i>
-                                    {{ 'Missing Persons' if is_missing else 'Criminal Activity' }}
-                                </span>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
+            <!-- Hotspots Card - Left Column -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h3 class="card-title">
                         <i class="fas fa-fire"></i>
-                        <h3>No Hotspots</h3>
-                        <p>No crime hotspots identified</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Trends Column -->
-        <div class="content-card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-chart-line"></i>
-                    Crime Trends
-                </h3>
-                <span class="card-count">{{ trends_list|length }}</span>
-            </div>
-            <div class="card-body">
-                {% if trends_list and trends_list|length > 0 %}
-                    {% for trend in trends_list %}
-                        {% set crime_type = trend.crime_type if trend.crime_type else 'General Trend' %}
-                        {% set severity = trend.severity if trend.severity else 'low' %}
-                        {% set description = trend.description if trend.description else '' %}
-                        {% set trend_category = trend.trend_category if trend.trend_category else '' %}
-                        {% set affected_demo = trend.affected_demographic if trend.affected_demographic else '' %}
-                        {% set time_pattern = trend.time_pattern if trend.time_pattern else '' %}
-
-                        <div class="list-item">
-                            <div class="item-header">
-                                <span class="item-title">{{ crime_type }}</span>
-                                <span class="item-badge {{ severity }}">{{ severity }}</span>
-                            </div>
-                            <div class="item-description">{{ description }}</div>
-                            <div class="item-meta">
-                                {% if trend_category %}
-                                <span>
-                                    <i class="fas fa-layer-group"></i>
-                                    {{ trend_category.replace('_', ' ') }}
-                                </span>
-                                {% endif %}
-                                {% if affected_demo %}
-                                <span>
-                                    <i class="fas fa-users"></i>
-                                    {{ affected_demo }}
-                                </span>
-                                {% endif %}
-                                {% if time_pattern %}
-                                <span>
-                                    <i class="fas fa-clock"></i>
-                                    {{ time_pattern }}
-                                </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-chart-line"></i>
-                        <h3>No Trends</h3>
-                        <p>No crime trends identified</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Recommendations Column -->
-        <div class="content-card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-lightbulb"></i>
-                    Recommendations
-                </h3>
-                <span class="card-count">{{ recommendations_list|length }}</span>
-            </div>
-            <div class="card-body">
-                {% if recommendations_list and recommendations_list|length > 0 %}
-                    {% for recommendation in recommendations_list %}
-                        {% set priority = recommendation.priority if recommendation.priority else 'low' %}
-                        {% set recommendation_text = recommendation.recommendation_text if recommendation.recommendation_text else '' %}
-
-                        <div class="list-item">
-                            <div class="item-header">
-                                <span class="item-badge {{ priority }}">{{ priority }}</span>
-                            </div>
-                            <div class="item-description">{{ recommendation_text }}</div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-lightbulb"></i>
-                        <h3>No Recommendations</h3>
-                        <p>No recommendations generated</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Alerts Column -->
-        <div class="content-card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-bell"></i>
-                    Alert Broadcasts
-                </h3>
-                <span class="card-count">{{ alerts_list|length }}</span>
-            </div>
-            <div class="card-body">
-                {% if alerts_list and alerts_list|length > 0 %}
-                    {% for alert in alerts_list %}
-                        {% set alert_id = alert.id if alert.id else '' %}
-                        {% set message = alert.message if alert.message else '' %}
-                        {% set status = alert.status if alert.status else 'pending' %}
-                        {% set recipient_count = alert.recipient_count if alert.recipient_count is defined else 0 %}
-                        {% set sent_at = alert.sent_at if alert.sent_at else '' %}
-                        {% set hotspot_id = alert.hotspot_id if alert.hotspot_id else '' %}
-
-                        {# Find location from hotspots #}
-                        {% set location_name = 'Unknown Location' %}
+                        Crime Hotspots
+                    </h3>
+                    <span class="card-count">{{ hotspots_list|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if hotspots_list and hotspots_list|length > 0 %}
                         {% for hotspot in hotspots_list %}
-                            {% if hotspot.id == hotspot_id %}
-                                {% set location = hotspot.location if hotspot.location else {} %}
-                                {% set location_name = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
-                            {% endif %}
-                        {% endfor %}
+                            {% set location = hotspot.location if hotspot.location else {} %}
+                            {% set area = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
+                            {% set risk_level = hotspot.risk_level if hotspot.risk_level else 'low' %}
+                            {% set incident_count = hotspot.incident_count if hotspot.incident_count is defined else 0 %}
+                            {% set crime_type = hotspot.crime_type if hotspot.crime_type else '' %}
+                            {% set is_missing = hotspot.is_missing_person_hotspot if hotspot.is_missing_person_hotspot is defined else false %}
 
-                        <div class="alert-item">
-                            <div class="alert-header">
-                                <div class="alert-location">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    {{ location_name }}
+                            <div class="list-item">
+                                <div class="item-header">
+                                    <span class="item-title">{{ area }}</span>
+                                    <span class="item-badge {{ risk_level }}">{{ risk_level }}</span>
                                 </div>
-                                <span class="alert-status {{ status }}">{{ status }}</span>
+                                <div class="item-meta">
+                                    <span>
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ incident_count }} incidents
+                                    </span>
+                                    {% if is_missing %}
+                                        <span>
+                                            <i class="fas fa-user-slash"></i>
+                                            Missing Person
+                                        </span>
+                                    {% elif crime_type %}
+                                        <span>
+                                            <i class="fas fa-tag"></i>
+                                            {{ crime_type }}
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="alert-message">{{ message }}</div>
-                            <div class="alert-footer">
-                                <div class="alert-recipients">
-                                    <i class="fas fa-users"></i>
-                                    <span>{{ recipient_count }} recipient{{ 's' if recipient_count != 1 else '' }}</span>
-                                </div>
-                                {% if sent_at %}
-                                <div>
-                                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                                    <span>Sent: {{ sent_at[:10] }}</span>
-                                </div>
-                                {% endif %}
-                                {% if status == 'pending' and current_user and current_user.role == 'admin' %}
-                                <div class="alert-actions">
-                                    <button type="button" class="alert-btn alert-btn-send" onclick="sendAlert('{{ alert_id }}')">
-                                        <i class="fas fa-paper-plane"></i>
-                                        Send Now
-                                    </button>
-                                </div>
-                                {% endif %}
-                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-fire"></i>
+                            <h3>No Hotspots</h3>
+                            <p>No crime hotspots identified</p>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-bell"></i>
-                        <h3>No Alerts</h3>
-                        <p>No alert broadcasts created</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Sidebar with Trends, Recommendations, Alerts -->
+        <div class="layout-right">
+            <div class="sidebar-scroll">
+                <!-- Trends Card -->
+                <div class="content-card sidebar-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            Crime Trends
+                        </h3>
+                        <span class="card-count">{{ trends_list|length }}</span>
                     </div>
-                {% endif %}
+                    <div class="card-body">
+                        {% if trends_list and trends_list|length > 0 %}
+                            {% for trend in trends_list %}
+                                {% set crime_type = trend.crime_type if trend.crime_type else 'General Trend' %}
+                                {% set severity = trend.severity if trend.severity else 'low' %}
+                                {% set description = trend.description if trend.description else '' %}
+                                {% set trend_category = trend.trend_category if trend.trend_category else '' %}
+                                {% set affected_demo = trend.affected_demographic if trend.affected_demographic else '' %}
+                                {% set time_pattern = trend.time_pattern if trend.time_pattern else '' %}
+
+                                <div class="list-item">
+                                    <div class="item-header">
+                                        <span class="item-title">{{ crime_type }}</span>
+                                        <span class="item-badge {{ severity }}">{{ severity }}</span>
+                                    </div>
+                                    <div class="item-description">{{ description }}</div>
+                                    <div class="item-meta">
+                                        {% if trend_category %}
+                                        <span>
+                                            <i class="fas fa-layer-group"></i>
+                                            {{ trend_category.replace('_', ' ') }}
+                                        </span>
+                                        {% endif %}
+                                        {% if affected_demo %}
+                                        <span>
+                                            <i class="fas fa-users"></i>
+                                            {{ affected_demo }}
+                                        </span>
+                                        {% endif %}
+                                        {% if time_pattern %}
+                                        <span>
+                                            <i class="fas fa-clock"></i>
+                                            {{ time_pattern }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-chart-line"></i>
+                                <h3>No Trends</h3>
+                                <p>No crime trends identified</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Recommendations Card -->
+                <div class="content-card sidebar-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-lightbulb"></i>
+                            Recommendations
+                        </h3>
+                        <span class="card-count">{{ recommendations_list|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if recommendations_list and recommendations_list|length > 0 %}
+                            {% for recommendation in recommendations_list %}
+                                {% set priority = recommendation.priority if recommendation.priority else 'low' %}
+                                {% set recommendation_text = recommendation.recommendation_text if recommendation.recommendation_text else '' %}
+
+                                <div class="list-item">
+                                    <div class="item-header">
+                                        <span class="item-badge {{ priority }}">{{ priority }}</span>
+                                    </div>
+                                    <div class="item-description">{{ recommendation_text }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-lightbulb"></i>
+                                <h3>No Recommendations</h3>
+                                <p>No recommendations generated</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Alerts Card -->
+                <div class="content-card sidebar-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-bell"></i>
+                            Alert Broadcasts
+                        </h3>
+                        <span class="card-count">{{ alerts_list|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if alerts_list and alerts_list|length > 0 %}
+                            {% for alert in alerts_list %}
+                                {% set alert_id = alert.id if alert.id else '' %}
+                                {% set message = alert.message if alert.message else '' %}
+                                {% set status = alert.status if alert.status else 'pending' %}
+                                {% set recipient_count = alert.recipient_count if alert.recipient_count is defined else 0 %}
+                                {% set sent_at = alert.sent_at if alert.sent_at else '' %}
+                                {% set hotspot_id = alert.hotspot_id if alert.hotspot_id else '' %}
+
+                                {# Find location from hotspots #}
+                                {% set location_name = 'Unknown Location' %}
+                                {% for hotspot in hotspots_list %}
+                                    {% if hotspot.id == hotspot_id %}
+                                        {% set location = hotspot.location if hotspot.location else {} %}
+                                        {% set location_name = location.city if location.city else (location.address if location.address else 'Unknown Location') %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                <div class="alert-item">
+                                    <div class="alert-header">
+                                        <div class="alert-location">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            {{ location_name }}
+                                        </div>
+                                        <span class="alert-status {{ status }}">{{ status }}</span>
+                                    </div>
+                                    <div class="alert-message">{{ message }}</div>
+                                    <div class="alert-footer">
+                                        <div class="alert-recipients">
+                                            <i class="fas fa-users"></i>
+                                            <span>{{ recipient_count }} recipient{{ 's' if recipient_count != 1 else '' }}</span>
+                                        </div>
+
+                                        {% if sent_at %}
+                                        <div class="alert-sent-info">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span>Sent: {{ sent_at[:16].replace('T', ' ') }}</span>
+                                        </div>
+                                        {% endif %}
+
+                                        <div class="alert-actions">
+                                            {% if status == 'pending' %}
+                                                <button type="button" class="alert-btn alert-btn-send" onclick="sendAlert('{{ alert_id }}')">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                    Send Now
+                                                </button>
+                                            {% elif status == 'sent' %}
+                                                <button type="button" class="alert-btn alert-btn-resend" onclick="resendAlert('{{ alert_id }}')">
+                                                    <i class="fas fa-redo"></i>
+                                                    Send Again
+                                                </button>
+                                            {% elif status == 'failed' %}
+                                                <button type="button" class="alert-btn alert-btn-send" onclick="resendAlert('{{ alert_id }}')">
+                                                    <i class="fas fa-redo"></i>
+                                                    Retry Send
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-bell"></i>
+                                <h3>No Alerts</h3>
+                                <p>No alert broadcasts created</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Back Actions -->
-    <div class="back-actions">
+    <!-- Back Actions - Full Width -->
+    <div class="back-actions layout-full">
         <a href="{{ url_for('analysis.list_analyses') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i>
             Back to Reports
@@ -1183,7 +1333,8 @@ function loadHotspots() {
             if (!isNaN(lat) && !isNaN(lng)) {
                 bounds.push([lat, lng]);
 
-                const color = getHotspotColor(hotspot.risk_level || 'low');
+                // ✅ Use color from backend data
+                const color = hotspot.color || '#9E9E9E';
                 const radius = Math.max((hotspot.incident_count || 1) * 50, 100);
 
                 L.circle([lat, lng], {
@@ -1197,7 +1348,10 @@ function loadHotspots() {
                         <span style="color: var(--text-secondary); font-size: 12px;">
                             Risk: <strong>${hotspot.risk_level || 'Unknown'}</strong><br>
                             Incidents: <strong>${hotspot.incident_count || 0}</strong><br>
-                            ${hotspot.crime_type ? `Type: <strong>${hotspot.crime_type}</strong>` : ''}
+                            ${hotspot.is_missing_person_hotspot
+                                ? 'Type: <strong>Missing Person</strong>'
+                                : (hotspot.crime_type ? `Type: <strong>${hotspot.crime_type}</strong>` : '')
+                            }
                         </span>
                     </div>
                 `);
@@ -1223,7 +1377,8 @@ function loadCrimes() {
             if (!isNaN(lat) && !isNaN(lng)) {
                 bounds.push([lat, lng]);
 
-                const color = getCrimeColor(crime.crime_type);
+                // ✅ Use color directly from backend data
+                const color = crime.color || '#808080';
 
                 L.circleMarker([lat, lng], {
                     radius: 8,
@@ -1277,33 +1432,7 @@ function switchMapView(view) {
     setTimeout(() => map.invalidateSize(), 100);
 }
 
-// Get hotspot color based on risk level
-function getHotspotColor(risk) {
-    const colors = {
-        low: '#4CAF50',
-        medium: '#FFC107',
-        high: '#FF5722',
-        critical: '#F44336'
-    };
-    return colors[risk.toLowerCase()] || '#9E9E9E';
-}
-
-// Get crime color based on type
-function getCrimeColor(type) {
-    const colors = {
-        murder: '#8B0000',
-        assault: '#DC143C',
-        robbery: '#FF4500',
-        burglary: '#FF8C00',
-        theft: '#FFD700',
-        vandalism: '#9370DB',
-        fraud: '#FF69B4',
-        kidnapping: '#8B0000'
-    };
-    return colors[type?.toLowerCase()] || '#808080';
-}
-
-// Send alert
+// Send alert (first time)
 async function sendAlert(alertId) {
     if (!confirm('Send this alert broadcast now?\n\nThis will send SMS notifications to all residents in the affected area.')) {
         return;
@@ -1346,6 +1475,53 @@ async function sendAlert(alertId) {
             window.toast.error('Error', error.message || 'Failed to send alert');
         } else {
             alert('Error: ' + (error.message || 'Failed to send alert'));
+        }
+    }
+}
+
+// Resend alert (for already sent/failed alerts)
+async function resendAlert(alertId) {
+    if (!confirm('Resend this alert broadcast?\n\nThis will send SMS notifications to all residents in the affected area again.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/analysis/alerts/${alertId}/resend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               'Failed to resend alert';
+            throw new Error(errorMessage);
+        }
+
+        // Success
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Alert resent successfully');
+        } else {
+            alert('Success: Alert resent successfully');
+        }
+
+        // Reload page after short delay
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error('Resend alert error:', error);
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to resend alert');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to resend alert'));
         }
     }
 }
@@ -1475,7 +1651,7 @@ function handleResize() {
     if (width < 768) {
         mapContainer.style.height = '400px';
     } else {
-        mapContainer.style.height = '500px';
+        mapContainer.style.height = '600px';
     }
 
     if (map) {
