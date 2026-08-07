@@ -16,17 +16,41 @@
 {% block extra_css %}
 <style>
 /* ===========================
-   PAGE LAYOUT
+   MODERN COMPACT LAYOUT
    =========================== */
 .page-container {
     display: flex;
     flex-direction: column;
-    gap: 28px;
-    height: 100%;
+    gap: 24px;
+}
+
+.layout-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.layout-full {
+    grid-column: 1 / -1;
+}
+
+.layout-sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.layout-main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* ===========================
-   BREADCRUMB & HEADER - MATCHING STYLE
+   BREADCRUMB
    =========================== */
 .page-breadcrumb {
     display: flex;
@@ -46,7 +70,7 @@
 }
 
 .breadcrumb-item:hover {
-    color: var(--primary-gold);
+    color: var(--warning);
 }
 
 .breadcrumb-item.active {
@@ -59,168 +83,136 @@
     font-size: 12px;
 }
 
+/* ===========================
+   COMPACT HEADER
+   =========================== */
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 24px;
-    margin-bottom: 8px;
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%);
+    pointer-events: none;
 }
 
 .header-content {
-    flex: 1;
-    min-width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
 }
 
-.header-title {
+.header-left {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 12px;
 }
 
 .header-icon {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15));
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    border: 1px solid var(--border);
 }
 
 .header-icon i {
-    font-size: 26px;
+    font-size: 24px;
     color: var(--warning);
 }
 
 .header-text h1 {
-    font-size: 32px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--text-primary);
-    margin: 0;
+    margin: 0 0 6px 0;
     letter-spacing: -0.5px;
-    line-height: 1.2;
 }
 
 .header-text p {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-secondary);
-    margin: 6px 0 0 0;
-    line-height: 1.5;
-}
-
-.header-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
+    margin: 0;
+    line-height: 1.4;
 }
 
 /* ===========================
-   STATS CARDS - TRANSPARENT
+   COMPACT FILTERS SIDEBAR
    =========================== */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-}
-
-.stat-card {
-    background: transparent;
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--warning), #d97706);
-    opacity: 0;
-    transition: var(--transition);
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--warning);
-}
-
-.stat-card:hover::before {
-    opacity: 1;
-}
-
-.stat-body {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.stat-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1;
-}
-
-/* ===========================
-   CONTENT CARD - TRANSPARENT
-   =========================== */
-.content-card {
+.filters-sidebar {
     background: transparent;
     backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    flex: 1;
     display: flex;
     flex-direction: column;
 }
 
-.card-header {
-    padding: 24px 28px;
+.filters-header {
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border);
+    background: transparent;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
-    background: transparent;
 }
 
-.card-title {
-    font-size: 18px;
+.filters-title {
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
+    margin: 0;
 }
 
-.filters {
+.filters-title i {
+    color: var(--warning);
+    font-size: 16px;
+}
+
+.clear-filters-btn {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition);
     display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
     align-items: center;
+    gap: 4px;
+}
+
+.clear-filters-btn:hover {
+    color: var(--warning);
+}
+
+.filters-body {
+    padding: 16px;
+}
+
+.filters-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .filter-group {
@@ -230,93 +222,218 @@
 }
 
 .filter-label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.filter-select {
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    color: var(--text-primary);
+.filter-control {
+    padding: 10px 12px;
     background: rgba(10, 14, 39, 0.4);
     backdrop-filter: blur(10px);
-    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: #ffffff;
     transition: var(--transition-fast);
-    min-width: 140px;
+    font-family: inherit;
+    width: 100%;
+    cursor: pointer;
 }
 
-.filter-select:focus {
+.filter-control:focus {
     outline: none;
+    background: rgba(10, 14, 39, 0.6);
     border-color: var(--warning);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
-.filter-select:hover {
-    border-color: var(--warning);
+.filter-control option {
+    background: var(--bg-tertiary);
+    color: #ffffff;
+}
+
+.filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
 }
 
 /* ===========================
-   CRIMINALS GRID - TRANSPARENT CARDS
+   QUICK STATS SIDEBAR
    =========================== */
-.criminals-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-    padding: 28px;
-    overflow-y: auto;
-    flex: 1;
+.quick-stats-sidebar {
+    background: transparent;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.criminal-card {
+.stats-title-compact {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stats-title-compact i {
+    color: var(--warning);
+    font-size: 16px;
+}
+
+.stats-grid-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.stat-item-compact {
+    padding: 10px;
+    background: rgba(10, 14, 39, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-item-compact:hover {
+    border-color: var(--warning);
+    transform: translateY(-1px);
+}
+
+.stat-value-compact {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--warning);
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+.stat-label-compact {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ===========================
+   CRIMINALS SECTION
+   =========================== */
+.criminals-section {
     background: transparent;
     backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
+}
+
+.section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.section-title i {
+    color: var(--warning);
+    font-size: 18px;
+}
+
+.section-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 10px;
+    background: rgba(10, 14, 39, 0.4);
+    border-radius: var(--radius-md);
+}
+
+.section-body {
+    padding: 20px;
+}
+
+/* ===========================
+   COMPACT CRIMINAL CARDS - IMPROVED
+   =========================== */
+.criminals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+}
+
+.criminal-card {
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
     transition: var(--transition);
+    cursor: pointer;
     display: flex;
     flex-direction: column;
-    cursor: pointer;
+    height: 100%;
 }
 
 .criminal-card:hover {
-    transform: translateY(-4px);
+    background: rgba(10, 14, 39, 0.6);
     border-color: var(--warning);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
+/* Compact Header */
 .criminal-header {
-    padding: 20px;
+    padding: 14px 16px;
     display: flex;
-    gap: 16px;
-    align-items: flex-start;
+    gap: 12px;
+    align-items: center;
     border-bottom: 1px solid var(--border);
 }
 
 .criminal-avatar {
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
     border-radius: var(--radius-md);
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15));
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 20px;
     color: var(--warning);
     font-weight: 700;
     flex-shrink: 0;
     border: 1px solid var(--border);
+    overflow: hidden;
 }
 
 .criminal-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: var(--radius-md);
 }
 
 .criminal-info {
@@ -325,54 +442,120 @@
 }
 
 .criminal-name {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .criminal-alias {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--primary-gold);
     font-style: italic;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .criminal-meta {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .meta-item {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
 .meta-item i {
-    font-size: 11px;
-    color: var(--text-muted);
+    font-size: 10px;
+    color: var(--warning);
 }
 
+/* Compact Body */
 .criminal-body {
-    padding: 20px;
+    padding: 14px 16px;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 10px;
+}
+
+.threat-indicator {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+}
+
+.threat-indicator i {
+    font-size: 14px;
+    color: var(--warning);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.threat-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.threat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.threat-value {
+    font-size: 12px;
+    color: var(--text-primary);
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.priority-badge i {
+    font-size: 9px;
 }
 
 .info-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .info-label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -380,84 +563,46 @@
 }
 
 .info-value {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-primary);
-    line-height: 1.5;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-.threat-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    background: rgba(10, 14, 39, 0.4);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius-sm);
-    border-left: 3px solid var(--warning);
-}
-
-.threat-indicator i {
-    font-size: 16px;
-    color: var(--warning);
-}
-
-.threat-info {
-    flex: 1;
-}
-
-.threat-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.threat-value {
-    font-size: 13px;
-    color: var(--text-primary);
-    margin-top: 2px;
-}
-
-.priority-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--warning);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
+/* Compact Footer */
 .criminal-footer {
-    padding: 16px 20px;
+    padding: 10px 16px;
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    margin-top: auto;
 }
 
 .status-badge {
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .status-badge.wanted {
-    background: var(--error-bg);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .status-badge.not-wanted {
-    background: var(--success-bg);
+    background: rgba(16, 185, 129, 0.15);
     color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .action-buttons {
@@ -466,8 +611,8 @@
 }
 
 .action-btn {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border);
     cursor: pointer;
@@ -480,7 +625,7 @@
 }
 
 .action-btn:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .action-btn.view:hover {
@@ -496,13 +641,13 @@
 }
 
 .action-btn.delete:hover {
-    background: var(--error-bg);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--error);
     border-color: var(--error);
 }
 
 .action-btn i {
-    font-size: 14px;
+    font-size: 12px;
 }
 
 /* ===========================
@@ -510,19 +655,20 @@
    =========================== */
 .empty-state {
     text-align: center;
-    padding: 80px 40px;
+    padding: 60px 40px;
+    color: var(--text-muted);
     grid-column: 1 / -1;
 }
 
 .empty-state i {
-    font-size: 64px;
-    color: var(--text-muted);
-    margin-bottom: 20px;
+    font-size: 48px;
+    margin-bottom: 16px;
     opacity: 0.5;
+    color: var(--warning);
 }
 
 .empty-state h3 {
-    font-size: 20px;
+    font-size: 18px;
     color: var(--text-primary);
     margin-bottom: 8px;
     font-weight: 600;
@@ -530,87 +676,87 @@
 
 .empty-state p {
     font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    line-height: 1.5;
 }
 
 /* ===========================
-   PAGINATION - TRANSPARENT
+   PAGINATION
    =========================== */
-.pagination {
-    padding: 20px 28px;
+.pagination-section {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid var(--border);
-    background: transparent;
-}
-
-.pagination-info {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.pagination-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.pagination-btn {
-    padding: 8px 14px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: var(--transition-fast);
-    min-width: 36px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    padding: 20px;
+    gap: 12px;
+    border-top: 1px solid var(--border);
 }
 
-.pagination-btn:hover:not(:disabled):not(.disabled) {
+.pagination {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.page-link {
+    padding: 8px 12px;
     background: rgba(10, 14, 39, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-link:hover:not(.disabled):not(.active) {
+    background: rgba(10, 14, 39, 0.6);
     border-color: var(--warning);
     color: var(--warning);
 }
 
-.pagination-btn:disabled,
-.pagination-btn.disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+.page-link.active {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    border-color: var(--warning);
+    color: white;
 }
 
-.pagination-btn.active {
-    background: linear-gradient(135deg, var(--warning), #d97706);
-    color: white;
-    border-color: var(--warning);
-    font-weight: 600;
+.page-link.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.page-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 8px;
 }
 
 /* ===========================
    BUTTONS
    =========================== */
 .btn {
-    padding: 12px 24px;
+    padding: 10px 18px;
     border-radius: var(--radius-md);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     border: none;
     cursor: pointer;
     transition: var(--transition);
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     text-decoration: none;
 }
 
 .btn i {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .btn-primary {
@@ -619,7 +765,8 @@
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
     color: white;
 }
 
@@ -632,50 +779,97 @@
 .btn-secondary:hover {
     background: rgba(10, 14, 39, 0.4);
     border-color: var(--warning);
-    color: var(--text-primary);
 }
 
 /* ===========================
    RESPONSIVE
    =========================== */
 @media (max-width: 1200px) {
+    .layout-grid {
+        grid-template-columns: 260px 1fr;
+    }
+
     .criminals-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 968px) {
+    .layout-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .layout-sidebar {
+        position: static;
+        order: 2;
+    }
+
+    .layout-main {
+        order: 1;
+    }
+
+    .criminals-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
     }
 }
 
 @media (max-width: 768px) {
     .page-header {
+        padding: 16px 20px;
+    }
+
+    .header-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .header-text h1 {
+        font-size: 20px;
+    }
+
+    .section-body {
+        padding: 16px;
+    }
+
+    .criminals-grid {
+        gap: 12px;
+    }
+
+    .criminal-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .stats-grid {
-        grid-template-columns: 1fr;
+    .criminal-avatar {
+        align-self: center;
     }
 
-    .filters {
-        width: 100%;
-    }
-
-    .filter-group {
-        flex: 1;
-        min-width: 120px;
-    }
-
-    .criminals-grid {
-        grid-template-columns: 1fr;
-        padding: 20px;
-    }
-
-    .pagination {
+    .criminal-footer {
         flex-direction: column;
-        gap: 15px;
+        align-items: stretch;
+        gap: 10px;
     }
 
-    .pagination-controls {
-        flex-wrap: wrap;
-        justify-content: center;
+    .action-buttons {
+        justify-content: space-between;
+    }
+
+    .action-btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid-compact {
+        grid-template-columns: 1fr;
     }
 }
 </style>
@@ -684,7 +878,7 @@
 {% block content %}
 <div class="page-container">
     <!-- Breadcrumb -->
-    <div class="page-breadcrumb">
+    <div class="page-breadcrumb layout-full">
         <a href="{{ url_for('dashboard.dashboard_home') }}" class="breadcrumb-item">
             <i class="fas fa-home"></i>
             <span>Home</span>
@@ -695,10 +889,10 @@
         </span>
     </div>
 
-    <!-- Page Header -->
-    <div class="page-header">
+    <!-- Compact Header -->
+    <div class="page-header layout-full">
         <div class="header-content">
-            <div class="header-title">
+            <div class="header-left">
                 <div class="header-icon">
                     <i class="fas fa-user-secret"></i>
                 </div>
@@ -707,8 +901,6 @@
                     <p>Track and manage criminal profiles and cases</p>
                 </div>
             </div>
-        </div>
-        <div class="header-actions">
             <a href="{{ url_for('criminal.criminal_form') }}" class="btn btn-primary">
                 <i class="fas fa-user-plus"></i>
                 Add Criminal
@@ -716,304 +908,443 @@
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-body">
-                <div class="stat-label">Total Criminals</div>
-                <div class="stat-value">{{ total }}</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-body">
-                <div class="stat-label">Wanted</div>
-                <div class="stat-value">{{ persons|selectattr('is_wanted', 'equalto', true)|list|length }}</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-body">
-                <div class="stat-label">High Priority</div>
-                <div class="stat-value">{{ persons|selectattr('priority_level', 'ge', 4)|list|length }}</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-body">
-                <div class="stat-label">This Month</div>
-                <div class="stat-value">{{ persons|length if persons else 0 }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Content Card -->
-    <div class="content-card">
-        <div class="card-header">
-            <h2 class="card-title">
-                <i class="fas fa-list"></i>
-                All Criminals ({{ total }})
-            </h2>
-            <div class="filters">
-                <div class="filter-group">
-                    <label class="filter-label">Wanted Status</label>
-                    <select class="filter-select" id="wantedFilter" onchange="applyFilters()">
-                        <option value="">All</option>
-                        <option value="true" {% if current_wanted == 'true' %}selected{% endif %}>Wanted</option>
-                        <option value="false" {% if current_wanted == 'false' %}selected{% endif %}>Not Wanted</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Priority</label>
-                    <select class="filter-select" id="priorityFilter" onchange="applyFilters()">
-                        <option value="">All Levels</option>
-                        <option value="5" {% if current_priority == 5 %}selected{% endif %}>Critical (5)</option>
-                        <option value="4" {% if current_priority == 4 %}selected{% endif %}>High (4+)</option>
-                        <option value="3" {% if current_priority == 3 %}selected{% endif %}>Medium (3+)</option>
-                        <option value="1" {% if current_priority == 1 %}selected{% endif %}>Low (1+)</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Threat Level</label>
-                    <select class="filter-select" id="threatFilter" onchange="applyFilters()">
-                        <option value="">All Levels</option>
-                        <option value="HIGH" {% if current_threat == 'HIGH' %}selected{% endif %}>High</option>
-                        <option value="MEDIUM" {% if current_threat == 'MEDIUM' %}selected{% endif %}>Medium</option>
-                        <option value="LOW" {% if current_threat == 'LOW' %}selected{% endif %}>Low</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">View</label>
-                    <select class="filter-select" id="deletedFilter" onchange="applyFilters()">
-                        <option value="false" {% if not include_deleted %}selected{% endif %}>Active Only</option>
-                        <option value="true" {% if include_deleted %}selected{% endif %}>Include Deleted</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="criminals-grid">
-            {% if persons and persons|length > 0 %}
-                {% for person in persons %}
-                <div class="criminal-card" onclick="window.location.href='{{ url_for('criminal.view_criminal', criminal_id=person.id) }}'">
-                    <div class="criminal-header">
-                        <div class="criminal-avatar">
-                            {% if person.primary_image %}
-                                <img src="{{ url_for('uploads', filename=person.primary_image|image_url) }}" alt="{{ person.first_name }} {{ person.last_name }}">
-                            {% else %}
-                                {{ person.first_name[0] }}{{ person.last_name[0] }}
-                            {% endif %}
-                        </div>
-                        <div class="criminal-info">
-                            <h3 class="criminal-name">{{ person.first_name }} {{ person.last_name }}</h3>
-                            {% if person.alias %}
-                            <div class="criminal-alias">"{{ person.alias }}"</div>
-                            {% endif %}
-                            <div class="criminal-meta">
-                                {% if person.national_id %}
-                                <div class="meta-item">
-                                    <i class="fas fa-id-card"></i>
-                                    <span>{{ person.national_id }}</span>
-                                </div>
-                                {% endif %}
-                                {% if person.gang_affiliation %}
-                                <div class="meta-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>{{ person.gang_affiliation }}</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="criminal-body">
-                        {% if person.threat_level or person.priority_level %}
-                        <div class="threat-indicator">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <div class="threat-info">
-                                <div class="threat-label">Threat Assessment</div>
-                                <div class="threat-value">
-                                    {{ person.threat_level if person.threat_level else 'UNKNOWN' }}
-                                    {% if person.priority_level %}
-                                        <span class="priority-badge">
-                                            <i class="fas fa-star"></i>
-                                            Priority {{ person.priority_level }}
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if person.distinctive_features %}
-                        <div class="info-section">
-                            <div class="info-label">Distinctive Features</div>
-                            <div class="info-value">
-                                {{ person.distinctive_features[:100] }}{% if person.distinctive_features|length > 100 %}...{% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if person.description %}
-                        <div class="info-section">
-                            <div class="info-label">Description</div>
-                            <div class="info-value">
-                                {{ person.description[:100] }}{% if person.description|length > 100 %}...{% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="criminal-footer">
-                        <span class="status-badge {{ 'wanted' if person.is_wanted else 'not-wanted' }}">
-                            {{ 'WANTED' if person.is_wanted else 'NOT WANTED' }}
-                        </span>
-                        <div class="action-buttons">
-                            <button class="action-btn view" onclick="event.stopPropagation(); window.location.href='{{ url_for('criminal.view_criminal', criminal_id=person.id) }}'" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="action-btn edit" onclick="event.stopPropagation(); window.location.href='{{ url_for('criminal.criminal_form', criminal_id=person.id) }}'" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="action-btn delete" onclick="event.stopPropagation(); deleteCriminal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}')" title="Delete">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-user-secret"></i>
-                    <h3>No Criminals Found</h3>
-                    <p>There are no criminal records matching your criteria.</p>
-                    <a href="{{ url_for('criminal.criminal_form') }}" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i>
-                        Add First Criminal
+    <!-- Main Layout Grid -->
+    <div class="layout-grid">
+        <!-- LEFT SIDEBAR: Filters & Stats -->
+        <div class="layout-sidebar">
+            <!-- Compact Filters -->
+            <div class="filters-sidebar">
+                <div class="filters-header">
+                    <h2 class="filters-title">
+                        <i class="fas fa-filter"></i>
+                        Filters
+                    </h2>
+                    <a href="{{ url_for('criminal.list_criminals') }}" class="clear-filters-btn">
+                        <i class="fas fa-times-circle"></i>
+                        Clear
                     </a>
                 </div>
-            {% endif %}
+                <div class="filters-body">
+                    <form method="GET" action="{{ url_for('criminal.list_criminals') }}">
+                        <div class="filters-grid">
+                            <!-- Wanted Status Filter -->
+                            <div class="filter-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-tag"></i>
+                                    Wanted Status
+                                </label>
+                                <select name="is_wanted" class="filter-control" id="wantedFilter">
+                                    <option value="">All Status</option>
+                                    <option value="true" {% if current_wanted == 'true' %}selected{% endif %}>Wanted</option>
+                                    <option value="false" {% if current_wanted == 'false' %}selected{% endif %}>Not Wanted</option>
+                                </select>
+                            </div>
+
+                            <!-- Priority Filter -->
+                            <div class="filter-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-star"></i>
+                                    Priority
+                                </label>
+                                <select name="min_priority" class="filter-control" id="priorityFilter">
+                                    <option value="">All Levels</option>
+                                    <option value="5" {% if current_priority == '5' %}selected{% endif %}>Critical (5)</option>
+                                    <option value="4" {% if current_priority == '4' %}selected{% endif %}>High (4+)</option>
+                                    <option value="3" {% if current_priority == '3' %}selected{% endif %}>Medium (3+)</option>
+                                    <option value="1" {% if current_priority == '1' %}selected{% endif %}>Low (1+)</option>
+                                </select>
+                            </div>
+
+                            <!-- Threat Level Filter -->
+                            <div class="filter-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Threat Level
+                                </label>
+                                <select name="threat_level" class="filter-control" id="threatFilter">
+                                    <option value="">All Levels</option>
+                                    <option value="HIGH" {% if current_threat == 'HIGH' %}selected{% endif %}>High</option>
+                                    <option value="MEDIUM" {% if current_threat == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                                    <option value="LOW" {% if current_threat == 'LOW' %}selected{% endif %}>Low</option>
+                                </select>
+                            </div>
+
+                            <!-- View Filter -->
+                            <div class="filter-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-eye"></i>
+                                    View
+                                </label>
+                                <select name="include_deleted" class="filter-control" id="deletedFilter">
+                                    <option value="false" {% if not include_deleted %}selected{% endif %}>Active Only</option>
+                                    <option value="true" {% if include_deleted %}selected{% endif %}>Include Deleted</option>
+                                </select>
+                            </div>
+
+                            <!-- Per Page Filter -->
+                            <div class="filter-group">
+                                <label class="filter-label">
+                                    <i class="fas fa-list"></i>
+                                    Per Page
+                                </label>
+                                <select name="per_page" class="filter-control">
+                                    <option value="12" {% if per_page == 12 %}selected{% endif %}>12</option>
+                                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                                    <option value="40" {% if per_page == 40 %}selected{% endif %}>40</option>
+                                    <option value="60" {% if per_page == 60 %}selected{% endif %}>60</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="filter-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                                Apply Filters
+                            </button>
+                            <a href="{{ url_for('criminal.list_criminals') }}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i>
+                                Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Stats Sidebar -->
+            <div class="quick-stats-sidebar">
+                <h3 class="stats-title-compact">
+                    <i class="fas fa-chart-pie"></i>
+                    Quick Stats
+                </h3>
+                <div class="stats-grid-compact">
+                    <div class="stat-item-compact">
+                        <div class="stat-value-compact">{{ total }}</div>
+                        <div class="stat-label-compact">Total</div>
+                    </div>
+                    <div class="stat-item-compact">
+                        <div class="stat-value-compact">{{ persons|selectattr('is_wanted', 'equalto', true)|list|length }}</div>
+                        <div class="stat-label-compact">Wanted</div>
+                    </div>
+                    <div class="stat-item-compact">
+                        <div class="stat-value-compact">{{ persons|selectattr('priority_level', 'ge', 4)|list|length }}</div>
+                        <div class="stat-label-compact">High Priority</div>
+                    </div>
+                    <div class="stat-item-compact">
+                        <div class="stat-value-compact">{{ persons|length if persons else 0 }}</div>
+                        <div class="stat-label-compact">This Page</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        {% if persons and persons|length > 0 and pagination %}
-        <div class="pagination">
-            <div class="pagination-info">
-                {% set start = ((page - 1) * per_page) + 1 %}
-                {% set calculated_end = page * per_page %}
-                {% set end = calculated_end if calculated_end < total else total %}
-                Showing {{ start }} to {{ end }} of {{ total }} criminals
-            </div>
-            <div class="pagination-controls">
-                <a href="{{ url_for('criminal.list_criminals', page=1, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if page <= 1 %}disabled{% endif %}"
-                   {% if page <= 1 %}onclick="return false;"{% endif %}>
-                    First
-                </a>
-                <a href="{{ url_for('criminal.list_criminals', page=page-1, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if page <= 1 %}disabled{% endif %}"
-                   {% if page <= 1 %}onclick="return false;"{% endif %}>
-                    Previous
-                </a>
+        <!-- RIGHT MAIN: Criminals List -->
+        <div class="layout-main">
+            <!-- Criminals Section -->
+            <div class="criminals-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-list"></i>
+                        All Criminals
+                    </h2>
+                    <span class="section-count">
+                        {{ total }} record{{ 's' if total != 1 else '' }}
+                    </span>
+                </div>
+                <div class="section-body">
+                    {% if persons and persons|length > 0 %}
+                        <div class="criminals-grid">
+                            {% for person in persons %}
+                            <div class="criminal-card" onclick="window.location.href='{{ url_for('criminal.view_criminal', criminal_id=person.id) }}'">
+                                <div class="criminal-header">
+                                    <div class="criminal-avatar">
+                                        {% if person.primary_image %}
+                                            <img src="{{ url_for('uploads', filename=person.primary_image|image_url) }}" alt="{{ person.first_name }} {{ person.last_name }}">
+                                        {% else %}
+                                            {{ person.first_name[0] if person.first_name else 'C' }}{{ person.last_name[0] if person.last_name else 'R' }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="criminal-info">
+                                        <h3 class="criminal-name">{{ person.first_name }} {{ person.last_name }}</h3>
+                                        {% if person.alias %}
+                                        <div class="criminal-alias">"{{ person.alias }}"</div>
+                                        {% endif %}
+                                        <div class="criminal-meta">
+                                            {% if person.national_id %}
+                                            <div class="meta-item">
+                                                <i class="fas fa-id-card"></i>
+                                                <span>{{ person.national_id }}</span>
+                                            </div>
+                                            {% endif %}
+                                            {% if person.gang_affiliation %}
+                                            <div class="meta-item">
+                                                <i class="fas fa-users"></i>
+                                                <span>{{ person.gang_affiliation }}</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
 
-                {% set start_page = page - 2 if page - 2 > 1 else 1 %}
-                {% set end_page = page + 2 if page + 2 < total_pages else total_pages %}
-                {% set current_page = page %}
-                {% set next_page = current_page + 1 %}
+                                <div class="criminal-body">
+                                    {% if person.threat_level or person.priority_level %}
+                                    <div class="threat-indicator">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <div class="threat-info">
+                                            <div class="threat-label">Threat Assessment</div>
+                                            <div class="threat-value">
+                                                {{ person.threat_level if person.threat_level else 'UNKNOWN' }}
+                                                {% if person.priority_level %}
+                                                    <span class="priority-badge">
+                                                        <i class="fas fa-star"></i>
+                                                        P{{ person.priority_level }}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
 
-                {% for page_num in range(start_page, end_page + 1) %}
-                <a href="{{ url_for('criminal.list_criminals', page=page_num, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if page_num == current_page %}active{% endif %}">
-                    {{ page_num }}
-                </a>
-                {% endfor %}
+                                    {% if person.distinctive_features %}
+                                    <div class="info-section">
+                                        <div class="info-label">Distinctive Features</div>
+                                        <div class="info-value">{{ person.distinctive_features }}</div>
+                                    </div>
+                                    {% endif %}
 
-                <a href="{{ url_for('criminal.list_criminals', page=next_page, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if current_page >= total_pages %}disabled{% endif %}"
-                   {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                    Next
-                </a>
-                <a href="{{ url_for('criminal.list_criminals', page=next_page, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if current_page >= total_pages %}disabled{% endif %}"
-                   {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                    Next
-                </a>
-                <a href="{{ url_for('criminal.list_criminals', page=total_pages, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
-                   class="pagination-btn {% if current_page >= total_pages %}disabled{% endif %}"
-                   {% if current_page >= total_pages %}onclick="return false;"{% endif %}>
-                    Last
-                </a>
+                                    {% if person.description %}
+                                    <div class="info-section">
+                                        <div class="info-label">Description</div>
+                                        <div class="info-value">{{ person.description }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="criminal-footer">
+                                    <span class="status-badge {{ 'wanted' if person.is_wanted else 'not-wanted' }}">
+                                        {{ 'WANTED' if person.is_wanted else 'NOT WANTED' }}
+                                    </span>
+                                    <div class="action-buttons">
+                                        <button class="action-btn view" onclick="event.stopPropagation(); window.location.href='{{ url_for('criminal.view_criminal', criminal_id=person.id) }}'" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="action-btn edit" onclick="event.stopPropagation(); window.location.href='{{ url_for('criminal.criminal_form', criminal_id=person.id) }}'" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="action-btn delete" onclick="event.stopPropagation(); deleteCriminal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}')" title="Delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-user-secret"></i>
+                            <h3>No Criminals Found</h3>
+                            <p>There are no criminal records matching your criteria.</p>
+                            <a href="{{ url_for('criminal.criminal_form') }}" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i>
+                                Add First Criminal
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if persons and persons|length > 0 and pagination %}
+                <div class="pagination-section">
+                    <div class="pagination">
+                        <!-- First & Previous -->
+                        <a href="{{ url_for('criminal.list_criminals', page=1, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
+                           class="page-link {% if page <= 1 %}disabled{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="{{ url_for('criminal.list_criminals', page=page-1, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
+                           class="page-link {% if page <= 1 %}disabled{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+
+                        <!-- Page Info -->
+                        <span class="page-info">
+                            Page {{ page }} of {{ total_pages }}
+                        </span>
+
+                        <!-- Page Numbers (show 5 pages max) -->
+                        {% set start_page = [1, page - 2]|max %}
+                        {% set end_page = [total_pages, page + 2]|min %}
+
+                        {% for page_num in range(start_page, end_page + 1) %}
+                            <a href="{{ url_for('criminal.list_criminals', page=page_num, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
+                               class="page-link {{ 'active' if page_num == page else '' }}">
+                                {{ page_num }}
+                            </a>
+                        {% endfor %}
+
+                        <!-- Next & Last -->
+                        <a href="{{ url_for('criminal.list_criminals', page=page+1, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
+                           class="page-link {% if page >= total_pages %}disabled{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        <a href="{{ url_for('criminal.list_criminals', page=total_pages, per_page=per_page, is_wanted=current_wanted, min_priority=current_priority, threat_level=current_threat, include_deleted=include_deleted) }}"
+                           class="page-link {% if page >= total_pages %}disabled{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 
 <script>
-    // Filter Functions
-    function applyFilters() {
-        const wanted = document.getElementById('wantedFilter').value;
-        const priority = document.getElementById('priorityFilter').value;
-        const threat = document.getElementById('threatFilter').value;
-        const deleted = document.getElementById('deletedFilter').value;
-
-        const params = new URLSearchParams(window.location.search);
-
-        if (wanted) {
-            params.set('is_wanted', wanted);
-        } else {
-            params.delete('is_wanted');
-        }
-
-        if (priority) {
-            params.set('min_priority', priority);
-        } else {
-            params.delete('min_priority');
-        }
-
-        if (threat) {
-            params.set('threat_level', threat);
-        } else {
-            params.delete('threat_level');
-        }
-
-        params.set('include_deleted', deleted);
-        params.set('page', '1'); // Reset to first page
-
-        window.location.search = params.toString();
+// Delete Criminal
+async function deleteCriminal(criminalId, criminalName) {
+    if (!confirm(`Are you sure you want to delete the record for "${criminalName}"?\n\nThis action cannot be undone.`)) {
+        return;
     }
 
-    // Delete Criminal
-    async function deleteCriminal(criminalId, criminalName) {
-        if (!confirm(`Are you sure you want to delete the record for "${criminalName}"? This action cannot be undone.`)) {
-            return;
+    try {
+        const response = await fetch(`{{ url_for('criminal.list_criminals') }}/${criminalId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            const errorMessage = data.message ||
+                               (data.error && data.error.details && data.error.details[0]) ||
+                               'Failed to delete record';
+            throw new Error(errorMessage);
         }
 
-        try {
-            const response = await fetch(`{{ url_for('criminal.list_criminals') }}/${criminalId}/delete`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+        // Success
+        if (window.toast) {
+            window.toast.success('Success', data.message || 'Criminal record deleted successfully');
+        } else {
+            alert('Success: Criminal record deleted successfully');
+        }
 
-            const data = await response.json();
+        // Reload page after short delay
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
 
-            if (data.error) {
-                if (window.toast) {
-                    window.toast.error('Error', data.message || 'Failed to delete criminal record');
-                }
+    } catch (error) {
+        console.error('Delete error:', error);
+
+        if (window.toast) {
+            window.toast.error('Error', error.message || 'Failed to delete record');
+        } else {
+            alert('Error: ' + (error.message || 'Failed to delete record'));
+        }
+    }
+}
+
+// Animate cards on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const criminalCards = document.querySelectorAll('.criminal-card');
+
+    criminalCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+
+        setTimeout(() => {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 50 * index);
+    });
+
+    // Animate stats
+    const statValues = document.querySelectorAll('.stat-value-compact');
+    statValues.forEach(stat => {
+        const target = parseInt(stat.textContent) || 0;
+        let current = 0;
+        const increment = target / 30;
+        const duration = 1000;
+        const stepTime = duration / 30;
+
+        stat.textContent = '0';
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                stat.textContent = target;
+                clearInterval(timer);
             } else {
-                if (window.toast) {
-                    window.toast.success('Success', data.message || 'Criminal record deleted successfully');
-                }
-                setTimeout(() => window.location.reload(), 1000);
+                stat.textContent = Math.floor(current);
             }
-        } catch (error) {
-            console.error('Error:', error);
-            if (window.toast) {
-                window.toast.error('Error', 'Failed to delete criminal record');
-            }
+        }, stepTime);
+    });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // N key for new criminal
+    if (e.key === 'n' || e.key === 'N') {
+        if (!e.target.matches('input, textarea, select')) {
+            window.location.href = '{{ url_for("criminal.criminal_form") }}';
         }
     }
+
+    // ESC to clear filters
+    if (e.key === 'Escape') {
+        window.location.href = '{{ url_for("criminal.list_criminals") }}';
+    }
+});
+</script>
+
+<!-- Scroll to Top Button -->
+<button id="scrollToTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="
+    display: none;
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 48px;
+    height: 48px;
+    background: var(--warning);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    transition: var(--transition);
+    align-items: center;
+    justify-content: center;
+">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<script>
+// Show/hide scroll to top button
+window.addEventListener('scroll', function() {
+    const scrollBtn = document.getElementById('scrollToTop');
+    if (scrollBtn) {
+        if (window.pageYOffset > 300) {
+            scrollBtn.style.display = 'flex';
+        } else {
+            scrollBtn.style.display = 'none';
+        }
+    }
+});
+
+// Enhance scroll to top button
+const scrollBtn = document.getElementById('scrollToTop');
+if (scrollBtn) {
+    scrollBtn.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-4px) scale(1.05)';
+    });
+
+    scrollBtn.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+    });
+}
 </script>
 {% endblock %}
