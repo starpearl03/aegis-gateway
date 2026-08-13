@@ -7,6 +7,7 @@ from flask_session import Session
 from flask_bcrypt import Bcrypt
 
 from src.modules.authentication.internal.admin_initializer import AdminInitializer
+from src.shared.configs.exceptions.handlers.global_error_handler import register_global_error_handlers
 from src.shared.data.database import db
 
 
@@ -180,9 +181,9 @@ def create_app(flask_app,
     for error, handler in error_handlers:
         app.register_error_handler(error, handler)
 
-        # ============================================
-        # File Upload Configuration
-        # ============================================
+    # ============================================
+    # File Upload Configuration
+    # ============================================
     uploads_config = configs.get("uploads")
 
     app.config['UPLOAD_FOLDER_ROOT'] = uploads_config.root_folder
@@ -222,6 +223,7 @@ def create_app(flask_app,
     # ============================================
     # Register global error handlers
     # ============================================
+    register_global_error_handlers(app)
 
     # ============================================
     # Initialize Executor (for background tasks) #Todo: create jobs to about the crimes in realtime for crime analysis
