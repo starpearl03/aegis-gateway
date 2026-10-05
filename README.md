@@ -495,7 +495,7 @@ Sentinel implements a **Generic Repository Pattern** with a base model providing
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/kudzaiprichard/sentinel.git
+git clone https://github.com/starpearl03/sentinel.git
 cd sentinel
 ```
 
@@ -765,8 +765,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contact
 
 For questions or support, please contact:
-- Email: kudzaiprichard@gmail.com
-- GitHub Issues: [https://github.com/kudzaiprichard/sentinel/issues](https://github.com/kudzaiprichard/sentinel/issues)
+- Email: starpearl03@gmail.com
+- GitHub Issues: [https://github.com/starpearl03/sentinel/issues](https://github.com/starpearl03/sentinel/issues)
 
 ---
 
